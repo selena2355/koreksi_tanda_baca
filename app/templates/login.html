@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+{% block subtitle %}Masuk{% endblock %}
+{% block nav_class %}single{% endblock %}
+
+{% block nav_items %}
+    <a class="nav-item active" href="{{ url_for('auth.login_page') }}">Login</a>
+{% endblock %}
+
+{% block content %}
+    <section class="workspace">
+        <div class="result-card">
+            <div class="result-line short"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+        </div>
+    </section>
+{% endblock %}

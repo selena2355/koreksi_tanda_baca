@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>{% block title %}Koreksi Tanda Baca{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+<header class="app-header">
+    <div class="top-bar">
+        <div class="brand">
+            <div class="brand-mark" aria-hidden="true"></div>
+            <div class="brand-text">
+                <span class="brand-title">Koreksi Tanda Baca</span>
+                <span class="brand-subtitle">{% block subtitle %}{% endblock %}</span>
+            </div>
+        </div>
+        <div class="profile">
+            <span class="profile-name">Profil</span>
+            <div class="profile-avatar" aria-hidden="true"></div>
+        </div>
+    </div>
+    <nav class="nav-bar {% block nav_class %}{% endblock %}">
+        {% block nav_items %}{% endblock %}
+    </nav>
+</header>
+
+<main class="page">
+    {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

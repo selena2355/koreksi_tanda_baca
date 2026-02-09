@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar{% endblock %}
+{% block subtitle %}Buat Akun{% endblock %}
+{% block nav_class %}single{% endblock %}
+
+{% block nav_items %}
+    <a class="nav-item active" href="{{ url_for('auth.register_page') }}">Daftar</a>
+{% endblock %}
+
+{% block content %}
+    <section class="workspace">
+        <div class="result-card">
+            <div class="result-line short"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+        </div>
+    </section>
+{% endblock %}

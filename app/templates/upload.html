@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Unggah Dokumen{% endblock %}
+{% block subtitle %}Pemeriksa Dokumen{% endblock %}
+
+{% block nav_items %}
+    <a class="nav-item active" href="{{ url_for('main.upload_dokumen') }}">Unggah</a>
+    <a class="nav-item" href="{{ url_for('riwayat.riwayat_page') }}">Riwayat</a>
+    <a class="nav-item" href="{{ url_for('main.tentang_page') }}">Tentang Aplikasi</a>
+{% endblock %}
+
+{% block content %}
+    <section class="workspace">
+        <div class="doc-form">
+            <div class="upload-row">
+                <form id="upload-form" method="POST" enctype="multipart/form-data">
+                    <label class="upload-button">
+                        <span>Unggah Dokumen</span>
+                        <input id="doc-input" type="file" name="file" accept=".pdf" {% if not preview_url %}required{% endif %}>
+                    </label>
+                </form>
+
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    <div class="alert">
+                        {{ messages[0] }}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="preview-card">
+                <div class="preview-header">Pratinjau Dokumen</div>
+                {% if preview_url %}
+                    <iframe class="preview-frame" src="{{ preview_url }}" title="Pratinjau PDF"></iframe>
+                {% else %}
+                    <div class="preview-placeholder">
+                        Dokumen Anda akan tampil di sini
+                    </div>
+                {% endif %}
+            </div>
+
+            <form class="check-form" method="GET" action="{{ url_for('main.hasil_koreksi') }}">
+                <button class="check-button" type="submit" {% if not preview_url %}disabled{% endif %}>Periksa Dokumen</button>
+            </form>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
