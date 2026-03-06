@@ -1,153 +1,356 @@
 # DOKUMENTASI APLIKASI KOREKSI TANDA BACA
-# =======================================
 
-## ALUR APLIKASI SECARA UMUM
+## ALUR SISTEM UTAMA
 
-1. USER MEMBUKA HALAMAN
-   - Browser request GET / ke server
-   - Server render template index.html
-   - Form upload dan preview placeholder ditampilkan
+Aplikasi ini mengikuti arsitektur berlapis (layered architecture):
 
-2. USER PILIH FILE PDF
-   - Event listener JavaScript mendeteksi file selection
-   - JavaScript panggil /clear-preview untuk hapus file lama
-   - Setelah clear selesai, form submit secara otomatis
+```
+Request → Routes → Controllers → Services → Utils/Rules → Models
+                   ↓
+              Responses
+```
 
-3. SERVER TERIMA FILE (POST REQUEST)
-   - Validasi: apakah ada file? file kosong? format pdf?
-   - Validasi: ukuran file <= 50MB?
-   - Hapus file lama (jika ada upload sebelumnya)
-   - Simpan file baru ke folder /uploads/
-   - Ekstrak text dari PDF (jika < 10MB)
-   - Simpan nama file ke session["preview_filename"]
-   - Redirect ke / (GET request)
+### 1. FLOW UPLOAD & KOREKSI
 
-4. SERVER RETURN KE HALAMAN UTAMA (GET REQUEST)
-   - Ambil preview_filename dari session
-   - Generate URL preview: /uploads/{filename}
-   - POP preview_filename dari session (hapus)
-   - Render index.html dengan preview_url
-   - Browser menampilkan iframe dengan PDF preview
+#### User Upload File PDF
+```
+GET / 
+├─ render upload form (templates/upload.html)
+└─ show preview area
+```
 
-5. IFRAME LOAD PDF
-   - Iframe request GET /uploads/{filename} ke server
-   - Server send file PDF
-   - Browser display PDF di iframe
+#### POST /upload/dokumen
+```
+POST /upload/dokumen
+├─ DokumenController.upload()
+│  ├─ validasi file (format, ukuran)
+│  ├─ secure_filename()
+│  └─ simpan ke folder 'uploads/'
+│
+├─ EkstraksiTeksService.ekstrak_dari_pdf()
+│  └─ gunakan PyMuPDF untuk ambil text
+│
+├─ PreprocessingService.bersihkan()
+│  └─ normalisasi text
+│
+├─ KoreksiService.koreksi()
+│  ├─ loop semua rule di app/rules/
+│  ├─ setiap rule apply check() → deteksi kesalahan
+│  └─ setiap rule apply fix() → perbaiki text
+│
+├─ RiwayatService.simpan()
+│  └─ simpan hasil ke file/DB
+│
+└─ return response (JSON atau render hasil.html)
+```
 
-6. USER RELOAD HALAMAN
-   - Session kosong, preview_filename tidak ada
-   - Render index.html tanpa preview_url
-   - Tampil preview placeholder kosong
-   - File di folder uploads sudah dihapus
+---
 
+## STRUKTUR FOLDER & TANGGUNG JAWAB
+
+### `app/`
+Root aplikasi Flask
+
+**File penting:**
+- `__init__.py` - Factory function `create_app()`, setup blueprint
+- `config.py` - Konfigurasi (path, folder, env vars)
+
+### `app/routes/`
+Endpoint routing (GET, POST, dll)
+
+**Files:**
+- `main_routes.py` - upload, preview, hasil
+- `auth_routes.py` - login, register
+- `riwayat_routes.py` - history list
+
+Setiap file adalah Blueprint yang di-register di `app/__init__.py`
+
+### `app/controllers/`
+Business logic tingkat tinggi
+
+**Files:**
+- `dokumen_controller.py` - upload, validasi, ekstraksi
+- `auth_controller.py` - login, logout, register
+- `riwayat_controller.py` - list riwayat
+
+Dipanggil oleh routes, memanggil services
+
+### `app/services/`
+Logika bisnis & utilitas kompleks
+
+**Files:**
+- `ekstraksi_teks_service.py` - extract text dari PDF
+- `preprocessing_service.py` - clean text (normalize, dll)
+- `koreksi_service.py` - apply semua rule
+- `riwayat_service.py` - CRUD riwayat koreksi
+- `auth_service.py` - auth logic
+- `pemeriksaan_dokumen_service.py` - validasi dokumen
+
+### `app/rules/`
+Aturan-aturan koreksi tanda baca (extensible)
+
+**Base:**
+- `base_rule.py` - Interface `BaseRule` dengan method `check()` & `fix()`
+
+**Implementasi:**
+- `koma_rule.py`
+- `titik_rule.py`
+- `tanda_tanya_rule.py`
+- `tanda_seru_rule.py`
+- `tanda_petik_rule.py`
+- `tanda_hubung_rule.py`
+- `titik_dua_rule.py`
+
+Setiap rule independently check & fix kesalahan tertentu
+
+### `app/models/`
+Kelas data sederhana (DTO / Value Objects)
+
+**Files:**
+- `dokumen.py` - Dokumen class
+- `hasil_koreksi.py` - HasilKoreksi class
+- `hasil_deteksi.py` - HasilDeteksi class
+- `kesalahan.py` - Kesalahan class
+- `pengguna.py` - Pengguna class
+- `riwayat_koreksi.py` - RiwayatKoreksi class
+
+### `app/utils/`
+Fungsi-fungsi utilitas helper
+
+**Files:**
+- `file_utils.py` - file operations
+- `pdf_utils.py` - PDF utilities (secure_filename, dll)
+- `docx_utils.py` - DOCX file handling
+- `text_utils.py` - text operations
+- `tokenize_utils.py` - tokenization
+- `sbd_utils.py` - sentence boundary detection (Stanza)
+- `pos_tag_utils.py` - POS tagging (Stanza)
+
+### `app/templates/`
+HTML dengan Jinja2 templating
+
+**Files:**
+- `base.html` - template dasar
+- `upload.html` / `preview.html` - form & preview
+- `hasil.html` - display hasil koreksi
+- `login.html`, `register.html` - auth pages
+- `riwayat.html` - history
+- `tentang.html` - about
+
+### `app/static/`
+Static files (CSS, JS, images)
+
+---
 
 ## KONSEP PENTING
 
-### SESSION (Penyimpanan Data Temporary)
-Session adalah penyimpanan data yang tied ke user/browser tertentu
-Dienkripsi menggunakan secret_key, disimpan di cookie user
-Contoh penggunaan:
+### Session
+Penyimpanan data temporary per user:
 ```python
-session["key"] = "value"  # Simpan data
-data = session.get("key")  # Ambil data
-data = session.pop("key")  # Ambil dan HAPUS data
+session["key"] = "value"          # Simpan
+data = session.get("key")         # Ambil
+data = session.pop("key")         # Ambil & hapus
 ```
 
-Kapan data hilang?
-- Saat browser ditutup (default Flask)
-- Saat session.pop() dipanggil
-- Saat browser clear cookies
+Kapan hilang? Saat browser tutup atau `session.pop()` dipanggil.
 
-### REQUEST METHOD (GET vs POST)
-GET:
-  - Untuk mengambil/menampilkan data
-  - Parameter dikirim di URL
-  - Data terlihat di address bar
-  - Tidak cocok untuk data sensitif
+### Request Method
+- **GET**: Ambil data, parameter di URL, tidak aman untuk sensitif
+- **POST**: Kirim data, parameter di body, cocok untuk file/sensitif
 
-POST:
-  - Untuk mengirim/mengubah data
-  - Data dikirim di body request (tidak terlihat di URL)
-  - Cocok untuk file upload
-  - Cocok untuk data sensitif
-
-### REDIRECT
+### Redirect
 ```python
 return redirect(url_for("function_name"))
-# atau
-return redirect(request.url)
 ```
-Memberitahu browser untuk membuat request baru ke URL lain
-Berguna untuk:
-- Menampilkan halaman setelah POST (prevent duplicate submit)
-- Mengubah GET parameter
-- Flow kontrol di aplikasi
+Memberitahu browser untuk request ulang ke URL lain (prevent duplicate submit).
 
-### FLASH MESSAGE
+### Flash Message
 ```python
-flash("Pesan untuk user")
+flash("Success!", "success")  # Simpan pesan di session (1x display)
 ```
-Menyimpan pesan dalam session yang ditampilkan 1x di template
-Cocok untuk notifikasi success/error
+di template:
+```html
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
+```
 
-### FILE HANDLING
-file.seek(0, os.SEEK_END) - Pindah pointer ke akhir file
-file.tell()               - Dapat posisi pointer (= ukuran file)
-file.seek(0)              - Pindah pointer ke awal file
-file.save(path)           - Simpan file ke disk
+### Environment Variables
+File `.env`:
+```
+FLASK_ENV=development
+SECRET_KEY=your-secret-here
+STANZA_LANG=id
+STANZA_DIR=./models/stanza
+```
 
+Dibaca viapy-dotenv termasuk app startup di `app/config.py`.
 
-## FITUR UTAMA
+---
 
-1. UPLOAD DOKUMEN
-   - Validasi format (harus .pdf)
-   - Validasi ukuran (max 50MB)
-   - secure_filename() untuk keamanan
-   - Hapus file lama sebelum simpan yang baru
+## MENAMBAH RULE KOREKSI BARU
 
-2. PREVIEW DOKUMEN
-   - Tampil di iframe
-   - Header cache control untuk prevent caching
-   - Pop dari session setelah ditampilkan (1x display only)
+1. Buat file `app/rules/nama_rule.py`:
+```python
+from app.rules.base_rule import BaseRule
 
-3. EKSTRAKSI TEXT
-   - Gunakan library fitz (PyMuPDF)
-   - Hanya untuk file < 10MB
-   - Extract dari setiap halaman kemudian gabung
-   - Simpan di session untuk nanti digunakan di halaman hasil
+class NamaRule(BaseRule):
+    def __init__(self):
+        super().__init__()
+        self.nama_rule = "nama_rule"
+        self.deskripsi = "Penjelasan singkat"
+    
+    def check(self, text):
+        """Deteksi kesalahan di text, return list Kesalahan"""
+        errors = []
+        # Regex atau logika deteksi
+        # ...
+        return errors
+    
+    def fix(self, text):
+        """Perbaiki kesalahan, return text terperbaiki"""
+        # Regex/replace logic
+        return fixed_text
+```
 
-4. PEMBERSIHAN FILE
-   - Hapus file lama saat upload file baru
-   - Hapus file saat user select file baru (via /clear-preview)
-   - Hapus file saat user reload halaman
+2. Import di `app/rules/__init__.py` atau di service yang menggunakan
 
+3. Register di `KoreksiService.koreksi()`:
+```python
+from app.rules.nama_rule import NamaRule
+
+rules = [
+    KomaRule(),
+    TitikRule(),
+    NamaRule(),  # <-- Add here
+]
+```
+
+---
+
+## MENAMBAH ROUTE BARU
+
+1. Buat file `app/routes/nama_routes.py`:
+```python
+from flask import Blueprint, render_template
+
+nama_bp = Blueprint('nama', __name__, url_prefix='/nama')
+
+@nama_bp.route('/', methods=['GET'])
+def index():
+    return render_template('nama.html')
+
+@nama_bp.route('/process', methods=['POST'])
+def process():
+    # logic
+    return jsonify({"status": "ok"})
+```
+
+2. Register di `app/__init__.py`:
+```python
+from app.routes.nama_routes import nama_bp
+
+app.register_blueprint(nama_bp)
+```
+
+---
+
+## TESTING
+
+### Unit Tests
+```bash
+pytest tests/
+pytest tests/test_rules.py -v
+pytest tests/ --cov=app --cov-report=html
+```
+
+### Manual Testing
+Jalankan server:
+```bash
+python app.py
+```
+
+Buka `http://localhost:5000` di browser.
+
+---
 
 ## DEBUGGING TIPS
 
-Untuk melihat apa yang terjadi di server, lihat console terminal:
-- print(f"Debug message: {variable}")
-- Gunakan debug print untuk trace alur aplikasi
+### Server Console
+```python
+print(f"Debug: {variable}")
+import logging
+logger.debug("message")
+```
 
-Untuk melihat request/response di browser:
-- Buka Developer Tools (F12)
-- Tab "Network" untuk lihat HTTP requests
-- Tab "Console" untuk lihat JavaScript errors
+### Browser DevTools
+- F12 → Network tab (lihat request/response)
+- F12 → Console tab (lihat JS errors)
 
+### Log Files
+Folder `logs/` berisi file log aplikasi.
 
-## FILE STRUCTURE
-app.py              - Main application (route, logic)
-app_commented.py    - Versi app.py dengan komentar lengkap
-templates/
-  index.html        - Halaman upload & preview
-  result.html       - Halaman hasil pemeriksaan
-static/
-  styles.css        - Styling
-uploads/            - Folder untuk menyimpan PDF temporary
+---
 
+## TEKNOLOGI YANG DIPAKAI
 
-## NEXT STEPS (Yang perlu dikembangkan)
-1. Implement logic pemeriksaan tanda baca
-2. Tampilkan hasil pemeriksaan di halaman result.html
-3. Tambah fitur download hasil pemeriksaan
-4. Tambah fitur history upload
-5. UI/UX improvement
+### Backend
+- **Flask** - Web framework
+- **Werkzeug** - WSGI, security utilities
+- **Jinja2** - Template engine
+
+### NLP / Text Processing
+- **Stanza** - SBD & POS tagging
+- **PyMuPDF (fitz)** - PDF extraction
+- **python-docx** - DOCX handling
+
+### Environment & Config
+- **python-dotenv** - Environment variables
+
+### Utilities
+- Regex (Python built-in)
+- JSON (Flask)/Pickle untuk serialisasi
+
+---
+
+## .GITIGNORE & DEPLOYMENT
+
+File besar yang di-ignore:
+```
+__pycache__/
+*.pyc
+env/
+venv/
+.env
+logs/
+uploads/
+models/stanza/        # <-- Model Stanza sangat besar, di-cache local
+```
+
+Saat deploy:
+1. Clone repo
+2. Setup venv & install `requirements.txt`
+3. Model Stanza di-download otomatis (lihat `app/utils/pos_tag_utils.py`) atau manual: 
+   ```python
+   import stanza
+   stanza.download('id', processors='tokenize,pos', model_dir='./models/stanza')
+   ```
+
+---
+
+## NEXT STEPS / TODO
+
+- [ ] Implementasi lebih banyak rule koreksi
+- [ ] Connect ke database (SQLite/PostgreSQL)
+- [ ] User authentication (login/register)
+- [ ] Riwayat koreksi per user
+- [ ] Export hasil (PDF/DOCX)
+- [ ] Performance optimization (caching, async processing)
+- [ ] API documentation (Swagger/OpenAPI)
+- [ ] CI/CD setup (GitHub Actions)
+
+---
+
+**Last Updated:** 6 Maret 2026

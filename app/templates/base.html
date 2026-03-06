@@ -6,6 +6,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>{% block title %}Koreksi Tanda Baca{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/K3.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head_extra %}{% endblock %}
 </head>
@@ -14,15 +15,14 @@
 <header class="app-header">
     <div class="top-bar">
         <div class="brand">
-            <div class="brand-mark" aria-hidden="true"></div>
+            <img class="brand-mark" src="{{ url_for('static', filename='images/K.png') }}" alt="K logo" aria-hidden="true">
             <div class="brand-text">
                 <span class="brand-title">Koreksi Tanda Baca</span>
                 <span class="brand-subtitle">{% block subtitle %}{% endblock %}</span>
             </div>
         </div>
         <div class="profile">
-            <span class="profile-name">Profil</span>
-            <div class="profile-avatar" aria-hidden="true"></div>
+            <span class="profile-name">Sign In</span>
         </div>
     </div>
     <nav class="nav-bar {% block nav_class %}{% endblock %}">

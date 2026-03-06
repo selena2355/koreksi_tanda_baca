@@ -5,46 +5,42 @@
 {% block nav_class %}single{% endblock %}
 
 {% block nav_items %}
-    <a class="nav-item active" href="{{ url_for('main.hasil_koreksi') }}">Hasil Koreksi</a>
+<a class="nav-item active" href="{{ url_for('main.hasil_koreksi') }}">Hasil Koreksi</a>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        window.addEventListener("beforeunload", () => {
+            fetch("{{ url_for('main.clear_preview') }}", { method: "POST" }).catch(() => {});
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
-    <section class="result-grid">
-        <div class="result-block">
-            <div class="result-title">Hasil Deteksi</div>
-            <div class="result-card">
-                {% if extracted_text %}
-                    <pre class="result-content">{{ extracted_text }}</pre>
-                {% else %}
-                    <div class="result-line short"></div>
-                    <div class="result-line mid"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                    <div class="result-line"></div>
-                {% endif %}
-            </div>
+<section class="result-grid">
+    <div class="result-block">
+        <div class="result-title">Hasil Deteksi</div>
+        <div class="result-card">
+            <pre class="result-content">{{ extracted_text }}</pre>
         </div>
+        <button class="back-button" type="button" onclick="history.back();">Kembali</button>
+    </div>
 
-        <div class="result-block">
-            <div class="result-title">Hasil Koreksi</div>
-            <div class="result-card">
-                <div class="result-line short"></div>
-                <div class="result-line mid"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-                <div class="result-line"></div>
-            </div>
-            <button class="download-button" type="button">Unduh</button>
+    <div class="result-block">
+        <div class="result-title">Hasil Koreksi</div>
+        <div class="result-card">
+            <div class="result-line short"></div>
+            <div class="result-line mid"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
+            <div class="result-line"></div>
         </div>
-    </section>
+        <button class="download-button" type="button">Unduh</button>
+    </div>
+</section>
 {% endblock %}

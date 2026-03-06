@@ -5,7 +5,9 @@
 {% block nav_class %}single{% endblock %}
 
 {% block nav_items %}
-    <a class="nav-item active" href="{{ url_for('main.tentang_page') }}">Tentang</a>
+    <a class="nav-item" href="{{ url_for('main.upload_dokumen') }}">Unggah</a>
+    <a class="nav-item" href="{{ url_for('riwayat.riwayat_page') }}">Riwayat</a>
+    <a class="nav-item active" href="{{ url_for('main.tentang_page') }}">Tentang Aplikasi</a>
 {% endblock %}
 
 {% block content %}

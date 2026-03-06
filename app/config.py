@@ -27,7 +27,8 @@ class Config:
     LOG_FOLDER = os.path.join(ROOT_DIR, "logs")
     
     # File extensions yang diizinkan
-    ALLOWED_EXTENSIONS = {"pdf"}
+    # ALLOWED_EXTENSIONS = {"pdf"}  # legacy PDF (disabled)
+    ALLOWED_EXTENSIONS = {"docx"}
     
     # Ukuran file maksimal (50 MB)
     MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 50 * 1024 * 1024))

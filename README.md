@@ -1,287 +1,139 @@
 # Aplikasi Koreksi Tanda Baca
 
-Aplikasi web untuk memeriksa dan memperbaiki tanda baca dalam dokumen PDF Bahasa Indonesia.
+Sebuah aplikasi web berbasis **Flask** untuk memeriksa dan memperbaiki
+berbagai kesalahan tanda baca pada dokumen PDF Bahasa Indonesia. Semua
+logika dipisahkan ke _routes_, _controllers_, _services_, dan _rules_ agar
+mudah dikembangkan dan diuji.
 
-## 📋 Fitur
+## 🚀 Fitur Utama
 
-- ✅ Upload dokumen PDF
-- ✅ Preview dokumen langsung di browser
-- ✅ Ekstraksi text dari PDF
-- ✅ Pemeriksaan tanda baca (sedang dikembangkan)
-- ✅ Download hasil pemeriksaan
+- Unggah & pratinjau file PDF
+- Ekstraksi teks menggunakan PyMuPDF (`fitz`)
+- Deteksi batas kalimat (SBD) dan POS tagging dengan **Stanza**
+- Lajur koreksi yang dapat diperluas (`app/rules`)
+- Penyimpanan riwayat koreksi
+- Blueprint terpisah untuk auth, riwayat, dan fitur utama
+- API internal untuk pemrosesan terprogram
 
-## 🚀 Quick Start
+> **Catatan:** model Stanza berukuran besar disimpan di `models/stanza/` dan
+> diabaikan oleh Git (lihat `.gitignore`).
 
-### Prerequisites
-- Python 3.8 atau lebih baru
-- pip (Python package manager)
-- Git (optional)
+---
 
-### Instalasi
+## 📦 Instalasi & Setup
 
-1. **Clone atau download repository**
-```bash
-git clone <repository-url>
-cd koreksi_tanda_baca
-```
-
-2. **Buat virtual environment**
-```bash
-# Windows
-python -m venv env
-env\Scripts\activate
-
-# macOS/Linux
-python3 -m venv env
-source env/bin/activate
-```
-
+1. **Clone repository**
+   ```bash
+   git clone <repo-url>
+   cd koreksi_tanda_baca
+   ```
+2. **Virtual environment**
+   ```bash
+   python -m venv env
+   env\Scripts\activate          # Windows
+   # atau: source env/bin/activate
+   ```
 3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Variabel lingkungan** (opsional)
+   - Buat file `.env` di root jika perlu.
+   - Atur `SECRET_KEY`, `STANZA_LANG`, dsb. Default sudah cocok untuk development.
+
+---
+
+## ▶️ Menjalankan Aplikasi
+
 ```bash
-pip install -r requirements.txt
+python app.py
 ```
 
-4. **Setup environment variables**
-```bash
-# Copy file contoh
-cp .env.example .env
+Akses `http://localhost:5000` di browser.
 
-# Edit .env sesuai kebutuhan (optional)
-# Untuk development, default sudah cukup
-```
+---
 
-5. **Jalankan aplikasi**
-```bash
-python run.py
-```
+## 🗂️ Struktur Proyek
 
-6. **Buka browser**
 ```
-http://localhost:5000
+├── app/
+│   ├── __init__.py        # create_app()
+│   ├── config.py          # konfigurasi
+│   ├── controllers/       # logika bisnis (dokumen, auth, riwayat)
+│   ├── routes/            # blueprint dan route Flask
+│   ├── services/          # ekstraksi, preprocessing, koreksi, riwayat
+│   ├── rules/             # aturan koreksi tanda baca
+│   ├── models/            # kelas data sederhana
+│   ├── utils/             # utilitas (file, pdf, sbd, pos, dll)
+│   ├── static/
+│   └── templates/
+├── docs/                  # dokumentasi (lihat DOKUMENTASI.md)
+├── tests/                 # unit tests
+├── uploads/               # file sementara
+├── logs/                  # file log
+├── models/stanza/         # model Stanza (di-ignore Git)
+├── requirements.txt
+├── app.py                 # entry point
+└── README.md
 ```
 
 ---
 
-## 📁 Struktur Folder
+## 🧠 Alur Sistem (singkat)
 
-```
-koreksi_tanda_baca/
-├── app/                    # Main application folder
-│   ├── __init__.py
-│   ├── config.py          # Konfigurasi aplikasi
-│   ├── models/            # Data models
-│   ├── routes/            # URL routing
-│   ├── controllers/       # Business logic
-│   ├── services/          # Service layer / helpers
-│   ├── rules/             # Aturan koreksi tanda baca
-│   ├── utils/             # Utility functions
-│   ├── static/            # CSS, JS, images
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── images/
-│   └── templates/         # HTML templates
-│
-├── tests/                 # Unit tests
-├── uploads/               # Folder untuk upload PDF (temporary)
-├── logs/                  # Log files
-├── docs/                  # Dokumentasi
-│
-├── .gitignore            # Git ignore file
-├── .env.example          # Environment variables template
-├── requirements.txt      # Python dependencies
-├── run.py               # Application entry point
-├── config.py            # Global configuration (optional)
-└── README.md            # File ini
-```
+1. **GET /** → `main_routes.index` menampilkan formulir upload.
+2. **POST /upload** → file disimpan di `uploads/` oleh `main_routes` / `DokumenController`.
+3. Teks diekstrak oleh `EkstraksiTeksService` dan dibersihkan oleh `PreprocessingService`.
+4. `KoreksiService` menerapkan semua rule yang ada di `app/rules` untuk mendeteksi dan memperbaiki kesalahan.
+5. Hasil dikemas ke objek model (`HasilKoreksi`) dan ditampilkan di `/hasil`.
+6. Riwayat ditangani oleh `RiwayatService` dan tersimpan (sederhana, bisa diperpanjang ke DB).
 
----
-
-## 🛠️ Development
-
-### Struktur File Penting
-
-- **`run.py`** - Jalankan aplikasi dari sini
-- **`app/config.py`** - Pengaturan aplikasi
-- **`app/__init__.py`** - Inisialisasi Flask app
-- **`requirements.txt`** - List semua library yang digunakan
-
-### Menambah Route Baru
-
-1. Buat file di `app/routes/` dengan nama deskriptif
-2. Buat function dengan decorator `@app.route()`
-3. Import di `app/__init__.py`
-
-Contoh:
-```python
-# app/routes/document.py
-from flask import Blueprint
-
-doc_bp = Blueprint('document', __name__)
-
-@doc_bp.route('/dokumen', methods=['GET'])
-def list_dokumen():
-    return "List dokumen"
-```
-
-### Menambah Rule Koreksi Baru
-
-1. Buat file di `app/rules/` dengan nama rule
-2. Inherit dari `BaseRule`
-3. Implement method `check()` dan `fix()`
-
-Contoh:
-```python
-# app/rules/custom_rule.py
-from app.rules.base_rule import BaseRule
-
-class CustomRule(BaseRule):
-    def check(self, text):
-        # Cek kesalahan
-        return errors
-    
-    def fix(self, text):
-        # Perbaiki kesalahan
-        return fixed_text
-```
-
----
-
-## 📦 Dependencies
-
-Semua library yang digunakan tercantum di `requirements.txt`:
-- **Flask** - Web framework
-- **PyMuPDF (fitz)** - PDF processing
-- **Werkzeug** - WSGI utilities
-- dll
-
-Untuk lihat versi lengkapnya:
-```bash
-pip list
-```
+Semua lapisan dapat diuji secara independen; lihat `tests/`.
 
 ---
 
 ## 🧪 Testing
 
-Jalankan unit tests:
 ```bash
 pytest tests/
 ```
 
-Dengan coverage report:
-```bash
-pytest --cov=app tests/
-```
+Masukkan `--cov=app` untuk laporan coverage.
 
 ---
 
-## 📝 Logging
+## 📦 Dependensi
 
-Log files disimpan di folder `logs/`:
-- Error akan tercatat otomatis
-- Lihat `logs/app.log` untuk debug
+Tergantung pada isi `requirements.txt` (minimal):
 
----
+- flask
+- python-dotenv
+- stanza
+- python-docx
+- PyMuPDF
 
-## 🐛 Troubleshooting
-
-### Problem: `ModuleNotFoundError: No module named 'flask'`
-**Solution:** Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Problem: Port 5000 sudah digunakan
-**Solution:** Ubah port di `run.py`
-```python
-app.run(debug=True, port=5001)
-```
-
-### Problem: File upload tidak bisa
-**Solution:** 
-- Cek folder `uploads/` ada dan bisa ditulis
-- Cek ukuran file tidak lebih dari 50MB
-- Lihat console untuk error message
+Paket lain diinstal secara otomatis sebagai dependensi Flask.
 
 ---
 
-## 🔐 Security Notes
+## ⚠️ Tips & Catatan
 
-⚠️ **PENTING UNTUK PRODUCTION:**
-
-1. **Ganti `SECRET_KEY`**
-   - Generate key yang aman
-   - Jangan hardcode di kode
-
-2. **Disable Debug Mode**
-   - Set `FLASK_DEBUG=False` di `.env`
-
-3. **Setup HTTPS**
-   - Gunakan reverse proxy (nginx, Apache)
-   - Setup SSL certificate
-
-4. **File Upload**
-   - Validasi semua file yang diupload
-   - Scan untuk malware
-
-5. **Environment Variables**
-   - Jangan commit `.env` ke git
-   - Gunakan `.env.example` sebagai template
+- Model Stanza sangat besar; jangan commit ke repo.
+- Perbarui `.gitignore` jika menambahkan folder lain yang tidak ingin dilacak.
+- Server dijalankan dengan `debug=True` hanya untuk pengembangan.
 
 ---
 
 ## 📖 Dokumentasi Lanjutan
 
-Untuk penjelasan lebih detail tentang kode:
-- Lihat [DOKUMENTASI.md](DOKUMENTASI.md) - Flow aplikasi dan konsep
-- Lihat [BELAJAR_PYTHON_DARI_NOL.md](BELAJAR_PYTHON_DARI_NOL.md) - Tutorial Python dasar
-- Lihat `app/app_commented.py` - Kode dengan komentar lengkap
+Lihat [DOKUMENTASI.md](DOKUMENTASI.md) untuk alur dan konsep lebih lengkap.
 
 ---
 
 ## 🤝 Kontribusi
 
-Untuk kontribusi:
-1. Fork repository
-2. Buat branch baru (`git checkout -b feature/nama-fitur`)
-3. Commit changes (`git commit -am 'Add fitur baru'`)
-4. Push ke branch (`git push origin feature/nama-fitur`)
-5. Create Pull Request
+Ikuti alur kerja GitHub standar: fork → branch → PR.
 
 ---
 
-## 📄 License
-
-[Tentukan license yang sesuai]
-
----
-
-## 👨‍💻 Author
-
-Created with ❤️
-
----
-
-## 📞 Support
-
-Jika ada pertanyaan atau masalah:
-1. Buka GitHub Issues
-2. Cek dokumentasi di folder `docs/`
-3. Lihat console untuk error messages
-
----
-
-## 🎯 Roadmap
-
-- [ ] Implementasi rule pemeriksaan tanda baca
-- [ ] Menambah lebih banyak rule
-- [ ] Export hasil ke berbagai format
-- [ ] Dashboard untuk history
-- [ ] User authentication
-- [ ] API documentation
-- [ ] Performance optimization
-
----
-
-**Last Updated:** 7 Februari 2026
-# koreksi_tanda_baca
+**Last updated:** 6 Maret 2026

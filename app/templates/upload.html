@@ -16,7 +16,7 @@
                 <form id="upload-form" method="POST" enctype="multipart/form-data">
                     <label class="upload-button">
                         <span>Unggah Dokumen</span>
-                        <input id="doc-input" type="file" name="file" accept=".pdf" {% if not preview_url %}required{% endif %}>
+                        <input id="doc-input" type="file" name="file" accept=".docx" {% if not preview_url %}required{% endif %}>
                     </label>
                 </form>
 
@@ -32,15 +32,18 @@
             <div class="preview-card">
                 <div class="preview-header">Pratinjau Dokumen</div>
                 {% if preview_url %}
-                    <iframe class="preview-frame" src="{{ preview_url }}" title="Pratinjau PDF"></iframe>
+                    <div class="preview-placeholder">
+                        Dokumen DOCX siap diproses{% if filename %}: {{ filename }}{% endif %}.
+                        Pratinjau tidak tersedia untuk DOCX.
+                    </div>
                 {% else %}
                     <div class="preview-placeholder">
-                        Dokumen Anda akan tampil di sini
+                        Dokumen DOCX Anda akan tampil di sini
                     </div>
                 {% endif %}
             </div>
 
-            <form class="check-form" method="GET" action="{{ url_for('main.hasil_koreksi') }}">
+            <form class="check-form" method="POST" action="{{ url_for('main.hasil_koreksi') }}">
                 <button class="check-button" type="submit" {% if not preview_url %}disabled{% endif %}>Periksa Dokumen</button>
             </form>
         </div>

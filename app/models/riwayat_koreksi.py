@@ -1,5 +1,6 @@
 class RiwayatKoreksi:
-    def __init__(self, pengguna_id=None, dokumen_id=None, waktu=None):
-        self.pengguna_id = pengguna_id
-        self.dokumen_id = dokumen_id
-        self.waktu = waktu
+    def __init__(self, tanggal=None, dokumen=None, hasil_deteksi=None, hasil_koreksi=None):
+        self.tanggal = tanggal
+        self.dokumen = dokumen
+        self.hasil_deteksi = hasil_deteksi
+        self.hasil_koreksi = hasil_koreksi

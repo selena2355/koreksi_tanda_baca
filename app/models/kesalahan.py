@@ -1,4 +1,5 @@
 class Kesalahan:
-    def __init__(self, jenis="", pesan=""):
+    def __init__(self, jenis="", deskripsi="", perbaikan=""):
         self.jenis = jenis
-        self.pesan = pesan
+        self.deskripsi = deskripsi
+        self.perbaikan = perbaikan
