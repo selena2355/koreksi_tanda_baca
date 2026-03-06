@@ -55,6 +55,9 @@ instance/
 .DS_Store
 Thumbs.db
 
+# stanza models (unduh otomatis, besar)
+models/stanza/
+
 # Testing
 .coverage
 .pytest_cache/
