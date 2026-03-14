@@ -10,7 +10,20 @@
 
 {% block scripts %}
     <script>
+        let skipClear = false;
+        const downloadLink = document.getElementById("download-link");
+        if (downloadLink) {
+            downloadLink.addEventListener("click", () => {
+                skipClear = true;
+                window.setTimeout(() => {
+                    skipClear = false;
+                }, 5000);
+            });
+        }
         window.addEventListener("beforeunload", () => {
+            if (skipClear) {
+                return;
+            }
             fetch("{{ url_for('main.clear_preview') }}", { method: "POST" }).catch(() => {});
         });
     </script>
@@ -21,7 +34,11 @@
     <div class="result-block">
         <div class="result-title">Hasil Deteksi</div>
         <div class="result-card">
-            <pre class="result-content">{{ extracted_text }}</pre>
+            {% if detection_html %}
+                <pre class="result-content">{{ detection_html | safe }}</pre>
+            {% else %}
+                <pre class="result-content">{{ extracted_text }}</pre>
+            {% endif %}
         </div>
         <button class="back-button" type="button" onclick="history.back();">Kembali</button>
     </div>
@@ -29,18 +46,11 @@
     <div class="result-block">
         <div class="result-title">Hasil Koreksi</div>
         <div class="result-card">
-            <div class="result-line short"></div>
-            <div class="result-line mid"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
+            {% if correction_text %}
+                <pre class="result-content">{{ correction_text }}</pre>
+            {% endif %}
         </div>
-        <button class="download-button" type="button">Unduh</button>
+        <a id="download-link" class="download-button" href="{{ url_for('main.unduh_hasil_koreksi') }}">Unduh</a>
     </div>
 </section>
 {% endblock %}

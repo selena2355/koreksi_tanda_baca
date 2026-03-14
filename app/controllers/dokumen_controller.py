@@ -46,6 +46,7 @@ class SistemWeb:
         self.auth_service = auth_service or AuthService()
         self.riwayat_service = riwayat_service or RiwayatService()
 
+    # Endpoint untuk unggah dokumen dan tampilkan preview
     def unggah_dokumen(self):
         if request.method == "POST":
             if "file" not in request.files:
@@ -73,6 +74,10 @@ class SistemWeb:
                         f"{old_file}.txt",
                     )
                     self.file_utils.remove_file_if_exists(
+                        Config.DETECTION_RESULT_FOLDER,
+                        f"{old_file}.highlight.html",
+                    )
+                    self.file_utils.remove_file_if_exists(
                         Config.CORRECTION_RESULT_FOLDER,
                         f"{old_file}.txt",
                     )
@@ -85,6 +90,7 @@ class SistemWeb:
 
                 session.pop("extracted_text_file", None)
                 session.pop("correction_result_file", None)
+                session.pop("detection_result_html_file", None)
                 session.pop("debug_normalized_file", None)
                 session.pop("structured_text_file", None)
                 session.pop("sbd_file", None)
@@ -120,6 +126,10 @@ class SistemWeb:
                     f"{current_file}.txt",
                 )
                 self.file_utils.remove_file_if_exists(
+                    Config.DETECTION_RESULT_FOLDER,
+                    f"{current_file}.highlight.html",
+                )
+                self.file_utils.remove_file_if_exists(
                     Config.CORRECTION_RESULT_FOLDER,
                     f"{current_file}.txt",
                 )
@@ -137,6 +147,13 @@ class SistemWeb:
                     extracted_text_file,
                 )
             session.pop("extracted_text_file", None)
+            detection_html_file = session.get("detection_result_html_file")
+            if detection_html_file:
+                self.file_utils.remove_file_if_exists(
+                    Config.DETECTION_RESULT_FOLDER,
+                    detection_html_file,
+                )
+            session.pop("detection_result_html_file", None)
             correction_result_file = session.get("correction_result_file")
             if correction_result_file:
                 self.file_utils.remove_file_if_exists(
@@ -174,6 +191,7 @@ class SistemWeb:
         response.headers["Expires"] = "0"
         return response
 
+    # Endpoint untuk menampilkan hasil deteksi dan koreksi
     def tampilkan_hasil(self):
         if request.method == "POST":
             current_file = session.get("current_file")
@@ -187,6 +205,7 @@ class SistemWeb:
                 return redirect(url_for("main.upload_dokumen"))
 
             text_filename = f"{current_file}.txt"
+            detection_html_filename = f"{current_file}.highlight.html"
             json_filename = f"{current_file}.json"
             sbd_filename = f"{current_file}.sbd.json"
             tokens_filename = f"{current_file}.tokens.json"
@@ -251,11 +270,11 @@ class SistemWeb:
                 pos_tags = []
                 flash(str(exc) or "Gagal melakukan POS tagging.")
 
-            try:
-                koreksi_text = self.pemeriksaan_service.terapkan_aturan(normalized_text)
-            except Exception as exc:
-                koreksi_text = ""
-                flash(str(exc) or "Gagal melakukan koreksi.")
+            deteksi_result = self.pemeriksaan_service.deteksi_dan_koreksi(normalized_text)
+            koreksi_text = deteksi_result["koreksi_text"]
+            detection_html = deteksi_result["detection_html"]
+            if deteksi_result["error"]:
+                flash(deteksi_result["error"])
 
             # Simpan hasil deteksi (selalu)
             self.file_utils.write_text_file(
@@ -264,6 +283,12 @@ class SistemWeb:
                 normalized_text,
             )
             session["extracted_text_file"] = text_filename
+            self.file_utils.write_text_file(
+                Config.DETECTION_RESULT_FOLDER,
+                detection_html_filename,
+                detection_html,
+            )
+            session["detection_result_html_file"] = detection_html_filename
 
             # Simpan hasil koreksi (selalu)
             self.file_utils.write_text_file(
@@ -311,7 +336,32 @@ class SistemWeb:
             if extracted_text_file
             else ""
         )
-        response = make_response(render_template("hasil.html", extracted_text=extracted_text))
+        detection_html_file = session.get("detection_result_html_file")
+        detection_html = (
+            self.file_utils.read_text_file(
+                Config.DETECTION_RESULT_FOLDER,
+                detection_html_file,
+            )
+            if detection_html_file
+            else ""
+        )
+        correction_result_file = session.get("correction_result_file")
+        correction_text = (
+            self.file_utils.read_text_file(
+                Config.CORRECTION_RESULT_FOLDER,
+                correction_result_file,
+            )
+            if correction_result_file
+            else ""
+        )
+        response = make_response(
+            render_template(
+                "hasil.html",
+                extracted_text=extracted_text,
+                detection_html=detection_html,
+                correction_text=correction_text,
+            )
+        )
 
         session["result_ready"] = False
         return response
@@ -342,6 +392,29 @@ def uploaded_file(filename):
     return response
 
 
+def unduh_hasil_koreksi():
+    correction_file = session.get("correction_result_file")
+    if not correction_file:
+        flash("Hasil koreksi tidak tersedia.")
+        return redirect(url_for("main.upload_dokumen"))
+
+    file_path = os.path.join(Config.CORRECTION_RESULT_FOLDER, correction_file)
+    if not os.path.exists(file_path):
+        flash("File hasil koreksi tidak ditemukan.")
+        return redirect(url_for("main.upload_dokumen"))
+
+    response = send_from_directory(
+        Config.CORRECTION_RESULT_FOLDER,
+        correction_file,
+        as_attachment=True,
+    )
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
+# Endpoint untuk membersihkan preview dan hasil terkait (opsional, bisa dipanggil via AJAX)
 def clear_preview():
     current_file = session.get("current_file")
     if current_file:
@@ -349,6 +422,10 @@ def clear_preview():
         _sistem_web.file_utils.remove_file_if_exists(
             Config.DETECTION_RESULT_FOLDER,
             f"{current_file}.txt",
+        )
+        _sistem_web.file_utils.remove_file_if_exists(
+            Config.DETECTION_RESULT_FOLDER,
+            f"{current_file}.highlight.html",
         )
         _sistem_web.file_utils.remove_file_if_exists(
             Config.CORRECTION_RESULT_FOLDER,
@@ -368,6 +445,13 @@ def clear_preview():
             extracted_text_file,
         )
     session.pop("extracted_text_file", None)
+    detection_html_file = session.get("detection_result_html_file")
+    if detection_html_file:
+        _sistem_web.file_utils.remove_file_if_exists(
+            Config.DETECTION_RESULT_FOLDER,
+            detection_html_file,
+        )
+    session.pop("detection_result_html_file", None)
     correction_result_file = session.get("correction_result_file")
     if correction_result_file:
         _sistem_web.file_utils.remove_file_if_exists(

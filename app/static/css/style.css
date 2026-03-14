@@ -364,6 +364,13 @@ body {
     padding-right: 6px;
 }
 
+.error-highlight {
+    background: rgba(255, 214, 165, 0.6);
+    border-radius: 4px;
+    padding: 0 2px;
+    cursor: help;
+}
+
 .download-button {
     align-self: flex-end;
     border: none;
@@ -372,6 +379,7 @@ body {
     padding: 12px 24px;
     border-radius: 14px;
     font-weight: 600;
+    font-size: 14px;
     cursor: pointer;
     box-shadow: 0 14px 26px rgba(0, 119, 182, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -390,6 +398,7 @@ body {
     padding: 12px 24px;
     border-radius: 14px;
     font-weight: 600;
+    font-size: 14px;
     cursor: pointer;
     box-shadow: 0 14px 26px rgba(0, 119, 182, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;

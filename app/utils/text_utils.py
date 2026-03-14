@@ -18,7 +18,7 @@ class TextNormalizer:
         "\u200c",  # Zero-width non-joiner
         "\u200d",  # Zero-width joiner
         "\u200e",  # Left-to-right mark
-        "\u200f",  # Right-to-left mark
+        "\u200f",  # Right-to-left mark 
         "\ufeff",  # Byte order mark (BOM)
         "\u00ad",  # Soft hyphen
     ]
@@ -33,12 +33,12 @@ class TextNormalizer:
         for char in self.ZERO_WIDTH_CHARS:
             text = text.replace(char, "")
 
+        # Normalisasi Unicode ke bentuk komposisi (NFC)
         text = unicodedata.normalize("NFKC", text)
+        # Ganti multiple spaces/tabs dengan single space, dan multiple newlines dengan double newline.
         text = re.sub(r"[ \t]+", " ", text)
+        # Ganti 3+ newlines dengan 2 newlines (untuk menjaga pemisahan paragraf).
         text = re.sub(r"\n{3,}", "\n\n", text)
-        text = re.sub(r"\s+([,.;:?!])", r"\1", text)
-        text = re.sub(r"\(\s+", "(", text)
-        text = re.sub(r"\s+\)", ")", text)
 
         return text.strip()
 
