@@ -43,6 +43,10 @@
                 {% endif %}
             </div>
 
+            <div id="slow-message" class="processing-hint" role="status" aria-live="polite">
+                Dokumen anda berukuran besar, mohon tunggu sebentar.
+            </div>
+
             <form class="check-form" method="POST" action="{{ url_for('main.hasil_koreksi') }}">
                 <button class="check-button" type="submit" {% if not preview_url %}disabled{% endif %}>Periksa Dokumen</button>
             </form>

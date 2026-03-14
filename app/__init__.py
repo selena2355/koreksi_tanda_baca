@@ -16,6 +16,10 @@ def create_app():
     app.config.from_object(Config)
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["DETECTION_RESULT_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["CORRECTION_RESULT_FOLDER"], exist_ok=True)
+    if app.config.get("DEBUG_SAVE"):
+        os.makedirs(app.config["DEBUG_FOLDER"], exist_ok=True)
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)

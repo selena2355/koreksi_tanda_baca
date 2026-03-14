@@ -19,9 +19,17 @@ class Config:
     """Base configuration"""
     # Secret key untuk session encryption
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-    
+
     # Upload folder - berada di root project, bukan di app/
     UPLOAD_FOLDER = os.path.join(ROOT_DIR, "uploads")
+
+    # Debug artifacts (derived files)
+    DEBUG_SAVE = False  # Set to True untuk menyimpan file debug
+    DEBUG_FOLDER = os.path.join(ROOT_DIR, "debug")
+
+    # Result folders
+    DETECTION_RESULT_FOLDER = os.path.join(ROOT_DIR, "detection_result")
+    CORRECTION_RESULT_FOLDER = os.path.join(ROOT_DIR, "correction_result")
     
     # Logs folder
     LOG_FOLDER = os.path.join(ROOT_DIR, "logs")

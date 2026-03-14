@@ -45,6 +45,9 @@ venv.bak/
 
 # Project specific
 uploads/
+debug/
+detection_result/
+correction_result/
 logs/
 *.log
 *.sqlite
