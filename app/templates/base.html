@@ -21,9 +21,18 @@
                 <span class="brand-subtitle">{% block subtitle %}{% endblock %}</span>
             </div>
         </div>
-        <div class="profile">
-            <span class="profile-name">Sign In</span>
+        {% if session.get("user_id") %}
+        <div class="sign-in is-auth">
+            <span class="username">{{ session.get("username", "Akun") }}</span>
+            <div class="sign-menu" role="menu">
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
         </div>
+        {% else %}
+        <div class="sign-in">
+            <a class="username" href="{{ url_for('auth.login_page') }}">Sign In</a>
+        </div>
+        {% endif %}
     </div>
     <nav class="nav-bar {% block nav_class %}{% endblock %}">
         {% block nav_items %}{% endblock %}

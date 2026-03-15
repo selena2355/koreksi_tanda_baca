@@ -44,7 +44,10 @@ class Config:
     # Flask settings
     JSON_SORT_KEYS = False
     JSONIFY_PRETTYPRINT_REGULAR = True
-
+    
+    # Pengaturan database (gunakan environment variable DATABASE_URL)
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class DevelopmentConfig(Config):
     """Development configuration"""

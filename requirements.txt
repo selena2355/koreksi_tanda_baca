@@ -1,8 +1,11 @@
-﻿# minimal list of top‑level dependencies used by the application
+﻿# daftar dependensi yang diperlukan untuk menjalankan aplikasi Flask ini
 Flask>=3.1.2
 python-dotenv>=1.0.0
 stanza            # sentence boundary detection / POS tagging
 python-docx>=1.2.0
 PyMuPDF>=1.26.7     # imported as fitz
 
-# other libraries are installed as transitive dependencies of Flask
+# library yang digunakan untuk mengelola database dan migrasi
+Flask-SQLAlchemy>=3.1.1
+Flask-Migrate>=4.0.7
+PyMySQL>=1.1.1

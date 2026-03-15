@@ -4,16 +4,35 @@
 {% block subtitle %}Masuk{% endblock %}
 {% block nav_class %}single{% endblock %}
 
-{% block nav_items %}
-    <a class="nav-item active" href="{{ url_for('auth.login_page') }}">Login</a>
-{% endblock %}
+{% block nav_items %}{% endblock %}
 
 {% block content %}
-    <section class="workspace">
-        <div class="result-card">
-            <div class="result-line short"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
+<div class="auth-overlay">
+    <div class="auth-card">
+        <h1 class="auth-title">Masuk</h1>
+        <p class="auth-subtitle">Gunakan email atau username untuk masuk.</p>
+        {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+        <div class="auth-alerts">
+            {% for category, message in messages %}
+            <div class="auth-alert {{ category }}">{{ message }}</div>
+            {% endfor %}
         </div>
-    </section>
+        {% endif %}
+        {% endwith %}
+        <form class="auth-form" method="post" action="{{ url_for('auth.login_post') }}">
+            <label class="auth-field">
+                <span>Email atau Username</span>
+                <input type="text" name="identifier" placeholder="contoh@domain.com atau username" required autocomplete="username">
+            </label>
+            <label class="auth-field">
+                <span>Password</span>
+                <input type="password" name="password" placeholder="Masukkan password" required autocomplete="current-password">
+            </label>
+            <button class="auth-submit" type="submit">Login</button>
+        </form>
+        <p class="auth-switch">Belum punya akun? <a href="{{ url_for('auth.register_page') }}">Daftar</a></p>
+    </div>
+</div>
+
 {% endblock %}

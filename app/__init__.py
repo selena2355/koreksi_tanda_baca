@@ -1,10 +1,12 @@
-from flask import Flask
+from flask import Flask, app
 import os
 
 from .config import Config
 from .routes.main_routes import main_bp
 from .routes.auth_routes import auth_bp
 from .routes.riwayat_routes import riwayat_bp
+from .extensions import db, migrate
+
 
 
 def create_app():
@@ -24,5 +26,8 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(riwayat_bp)
+    
+    db.init_app(app)
+    migrate.init_app(app, db)
 
     return app
