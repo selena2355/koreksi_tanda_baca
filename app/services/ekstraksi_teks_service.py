@@ -6,12 +6,22 @@ import re
 
 try:
     from docx import Document
+    from docx.document import Document as DocxDocument
     from docx.oxml.ns import qn
+    from docx.oxml.table import CT_Tbl
+    from docx.oxml.text.paragraph import CT_P
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
     Document = None
+    DocxDocument = None
     qn = None
+    CT_Tbl = None
+    CT_P = None
+    Table = None
+    Paragraph = None
 
 
 class TextExtractor:
@@ -37,6 +47,8 @@ class TextExtractor:
             {
                 'text': str,              # Raw text
                 'paragraphs': list[str],  # Clean paragraphs (recommended untuk processing)
+                'tables': list[str],      # Flattened table rows
+                'table_blocks': list[str],# Table text grouped per table
                 'metadata': dict,         # File metadata
                 'format': str,            # 'docx'
                 'quality': str            # 'high', 'medium', or 'low'
@@ -70,34 +82,31 @@ class TextExtractor:
         counters = {}
         style_counters = {}
 
-        # Extract paragraphs (clean & utuh!)
         paragraphs = []
-        for para in document.paragraphs:
-            text = self._extract_paragraph_text(para)
-            if not text:
-                text = para.text or ""
-            text = text.strip()
-            if not text:  # Skip empty paragraphs
+        table_texts = []
+        table_blocks = []
+
+        for block in self._iter_block_items(document):
+            if isinstance(block, Paragraph):
+                text = self._prepare_paragraph_text(
+                    block,
+                    numbering_map,
+                    counters,
+                    style_counters,
+                )
+                if text:
+                    paragraphs.append(text)
                 continue
 
-            prefix = self._get_list_prefix(para, text, numbering_map, counters, style_counters)
-            if prefix:
-                text = f"{prefix} {text}"
+            if isinstance(block, Table):
+                table_lines = self._extract_table_lines(block)
+                if not table_lines:
+                    continue
+                paragraphs.extend(table_lines)
+                table_texts.extend(table_lines)
+                table_blocks.append("\n".join(table_lines))
 
-            paragraphs.append(text)
-        
-        # Extract tables (optional, untuk completeness)
-        table_texts = []
-        for table in document.tables:
-            for row in table.rows:
-                cells = [cell.text.strip() for cell in row.cells]
-                # Join dengan pipe separator
-                table_texts.append(" | ".join(cells))
-        
-        # Combine all text
-        all_text = "\n".join(paragraphs)
-        if table_texts:
-            all_text += "\n\n" + "\n".join(table_texts)
+        all_text = "\n\n".join(paragraphs)
         
         # Extract metadata
         metadata = {
@@ -107,16 +116,93 @@ class TextExtractor:
             'modified': str(document.core_properties.modified) if document.core_properties.modified else '',
             'paragraph_count': len(paragraphs),
             'table_count': len(document.tables),
+            'table_row_count': len(table_texts),
         }
         
         return {
             'text': all_text,
             'paragraphs': paragraphs,  # ✅ Clean & ready to use!
             'tables': table_texts,
+            'table_blocks': table_blocks,
             'metadata': metadata,
             'format': 'docx',
             'quality': 'high'  # DOCX = high quality extraction
         }
+
+    def _prepare_paragraph_text(self, paragraph, numbering_map, counters, style_counters):
+        text = self._extract_paragraph_text(paragraph)
+        if not text:
+            text = paragraph.text or ""
+        text = text.strip()
+        if not text:
+            return ""
+
+        prefix = self._get_list_prefix(
+            paragraph,
+            text,
+            numbering_map,
+            counters,
+            style_counters,
+        )
+        if prefix:
+            text = f"{prefix} {text}"
+
+        return text
+
+    def _iter_block_items(self, parent):
+        if not DOCX_AVAILABLE:
+            return
+
+        if isinstance(parent, DocxDocument):
+            parent_element = parent.element.body
+        else:
+            parent_element = parent._tc
+
+        for child in parent_element.iterchildren():
+            if isinstance(child, CT_P):
+                yield Paragraph(child, parent)
+            elif isinstance(child, CT_Tbl):
+                yield Table(child, parent)
+
+    def _extract_table_lines(self, table):
+        lines = []
+        for row in table.rows:
+            cells = self._extract_row_cells(row)
+            if not any(cell.strip() for cell in cells):
+                continue
+            lines.append(" | ".join(cells).strip())
+        return lines
+
+    def _extract_row_cells(self, row):
+        cells = []
+        seen = set()
+
+        for cell in row.cells:
+            cell_id = id(cell._tc)
+            if cell_id in seen:
+                continue
+            seen.add(cell_id)
+            cells.append(self._extract_cell_text(cell))
+
+        return cells
+
+    def _extract_cell_text(self, cell):
+        fragments = []
+
+        for block in self._iter_block_items(cell):
+            if isinstance(block, Paragraph):
+                text = self._extract_paragraph_text(block)
+                text = re.sub(r"\s+", " ", text).strip()
+                if text:
+                    fragments.append(text)
+                continue
+
+            if isinstance(block, Table):
+                nested_lines = self._extract_table_lines(block)
+                if nested_lines:
+                    fragments.append(" ; ".join(nested_lines))
+
+        return " ".join(fragments).strip()
 
     def _extract_paragraph_text(self, paragraph):
         if not DOCX_AVAILABLE:
@@ -130,6 +216,10 @@ class TextExtractor:
                     continue
                 if tag.endswith("}t") and node.text:
                     texts.append(node.text)
+                elif tag.endswith("}tab"):
+                    texts.append("\t")
+                elif tag.endswith("}br") or tag.endswith("}cr"):
+                    texts.append("\n")
         except Exception:
             return paragraph.text or ""
 
