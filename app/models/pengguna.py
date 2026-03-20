@@ -10,6 +10,12 @@ class Pengguna(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    riwayat_koreksi = db.relationship(
+        "RiwayatKoreksi",
+        back_populates="pengguna",
+        cascade="all, delete-orphan",
+        order_by="desc(RiwayatKoreksi.created_at)",
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

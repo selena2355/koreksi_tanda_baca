@@ -9,6 +9,7 @@
     make_response,
 )
 import os
+import secrets
 
 from ..config import Config
 from ..services.ekstraksi_teks_service import TextExtractor
@@ -46,6 +47,118 @@ class SistemWeb:
         self.auth_service = auth_service or AuthService()
         self.riwayat_service = riwayat_service or RiwayatService()
 
+    def _cleanup_current_result_files(self):
+        current_file = session.get("current_file")
+        if current_file:
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, current_file)
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{current_file}.txt")
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{current_file}.json")
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{current_file}.sbd.json")
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{current_file}.tokens.json")
+            self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{current_file}.pos.json")
+            self.file_utils.remove_file_if_exists(
+                Config.DETECTION_RESULT_FOLDER,
+                f"{current_file}.txt",
+            )
+            self.file_utils.remove_file_if_exists(
+                Config.DETECTION_RESULT_FOLDER,
+                f"{current_file}.highlight.html",
+            )
+            self.file_utils.remove_file_if_exists(
+                Config.CORRECTION_RESULT_FOLDER,
+                f"{current_file}.txt",
+            )
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.txt")
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.json")
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.sbd.json")
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.tokens.json")
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.pos.json")
+
+        extracted_text_file = session.get("extracted_text_file")
+        if extracted_text_file:
+            self.file_utils.remove_file_if_exists(
+                Config.DETECTION_RESULT_FOLDER,
+                extracted_text_file,
+            )
+
+        detection_html_file = session.get("detection_result_html_file")
+        if detection_html_file:
+            self.file_utils.remove_file_if_exists(
+                Config.DETECTION_RESULT_FOLDER,
+                detection_html_file,
+            )
+
+        correction_result_file = session.get("correction_result_file")
+        if correction_result_file:
+            self.file_utils.remove_file_if_exists(
+                Config.CORRECTION_RESULT_FOLDER,
+                correction_result_file,
+            )
+
+        debug_normalized_file = session.get("debug_normalized_file")
+        if debug_normalized_file:
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, debug_normalized_file)
+
+        structured_text_file = session.get("structured_text_file")
+        if structured_text_file:
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, structured_text_file)
+
+        sbd_file = session.get("sbd_file")
+        if sbd_file:
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, sbd_file)
+
+        tokens_file = session.get("tokens_file")
+        if tokens_file:
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, tokens_file)
+
+        pos_file = session.get("pos_file")
+        if pos_file:
+            self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, pos_file)
+
+    def _clear_current_result_session(self):
+        session["current_file"] = None
+        session.pop("preview_filename", None)
+        session.pop("extracted_text_file", None)
+        session.pop("detection_result_html_file", None)
+        session.pop("correction_result_file", None)
+        session.pop("debug_normalized_file", None)
+        session.pop("structured_text_file", None)
+        session.pop("sbd_file", None)
+        session.pop("tokens_file", None)
+        session.pop("pos_file", None)
+        session.pop("history_saved", None)
+        session.pop("saved_history_id", None)
+        session.pop("result_token", None)
+        session["result_ready"] = False
+
+    def _clear_preview_and_results(self):
+        self._cleanup_current_result_files()
+        self._clear_current_result_session()
+
+    def _can_save_current_result_to_history(self):
+        return bool(
+            session.get("user_id")
+            and not session.get("history_saved")
+            and session.get("result_token")
+            and session.get("current_file")
+            and session.get("detection_result_html_file")
+            and session.get("correction_result_file")
+        )
+
+    def _save_current_result_to_history(self):
+        if not self._can_save_current_result_to_history():
+            return None
+
+        riwayat = self.riwayat_service.simpan_dari_session(
+            pengguna_id=session.get("user_id"),
+            session_data=session,
+            file_utils=self.file_utils,
+        )
+        if riwayat:
+            session["history_saved"] = True
+            session["saved_history_id"] = riwayat.id
+        return riwayat
+
     # Endpoint untuk unggah dokumen dan tampilkan preview
     def unggah_dokumen(self):
         if request.method == "POST":
@@ -61,41 +174,9 @@ class SistemWeb:
             if file and self.docx_utils.allowed_file(file.filename, Config.ALLOWED_EXTENSIONS):
                 old_file = session.get("current_file")
                 if old_file:
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, old_file)
-                    # Legacy artifacts in uploads (cleanup if present)
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{old_file}.txt")
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{old_file}.json")
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{old_file}.sbd.json")
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{old_file}.tokens.json")
-                    self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, f"{old_file}.pos.json")
-                    # Detection/correction results
-                    self.file_utils.remove_file_if_exists(
-                        Config.DETECTION_RESULT_FOLDER,
-                        f"{old_file}.txt",
-                    )
-                    self.file_utils.remove_file_if_exists(
-                        Config.DETECTION_RESULT_FOLDER,
-                        f"{old_file}.highlight.html",
-                    )
-                    self.file_utils.remove_file_if_exists(
-                        Config.CORRECTION_RESULT_FOLDER,
-                        f"{old_file}.txt",
-                    )
-                    # Debug artifacts
-                    self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{old_file}.txt")
-                    self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{old_file}.json")
-                    self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{old_file}.sbd.json")
-                    self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{old_file}.tokens.json")
-                    self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{old_file}.pos.json")
+                    self._cleanup_current_result_files()
 
-                session.pop("extracted_text_file", None)
-                session.pop("correction_result_file", None)
-                session.pop("detection_result_html_file", None)
-                session.pop("debug_normalized_file", None)
-                session.pop("structured_text_file", None)
-                session.pop("sbd_file", None)
-                session.pop("tokens_file", None)
-                session.pop("pos_file", None)
+                self._clear_current_result_session()
 
                 filename = self.docx_utils.secure_filename_safe(file.filename)
                 file_path = self.file_utils.remove_file_if_exists(
@@ -118,70 +199,8 @@ class SistemWeb:
         preview_url = url_for("main.uploaded_file", filename=filename) if (filename and show_preview) else None
 
         if not show_preview:
-            current_file = session.get("current_file")
-            if current_file:
-                self.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, current_file)
-                self.file_utils.remove_file_if_exists(
-                    Config.DETECTION_RESULT_FOLDER,
-                    f"{current_file}.txt",
-                )
-                self.file_utils.remove_file_if_exists(
-                    Config.DETECTION_RESULT_FOLDER,
-                    f"{current_file}.highlight.html",
-                )
-                self.file_utils.remove_file_if_exists(
-                    Config.CORRECTION_RESULT_FOLDER,
-                    f"{current_file}.txt",
-                )
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.txt")
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.json")
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.sbd.json")
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.tokens.json")
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.pos.json")
-            session["current_file"] = None
-            session.pop("preview_filename", None)
-            extracted_text_file = session.get("extracted_text_file")
-            if extracted_text_file:
-                self.file_utils.remove_file_if_exists(
-                    Config.DETECTION_RESULT_FOLDER,
-                    extracted_text_file,
-                )
-            session.pop("extracted_text_file", None)
-            detection_html_file = session.get("detection_result_html_file")
-            if detection_html_file:
-                self.file_utils.remove_file_if_exists(
-                    Config.DETECTION_RESULT_FOLDER,
-                    detection_html_file,
-                )
-            session.pop("detection_result_html_file", None)
-            correction_result_file = session.get("correction_result_file")
-            if correction_result_file:
-                self.file_utils.remove_file_if_exists(
-                    Config.CORRECTION_RESULT_FOLDER,
-                    correction_result_file,
-                )
-            session.pop("correction_result_file", None)
-            debug_normalized_file = session.get("debug_normalized_file")
-            if debug_normalized_file:
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, debug_normalized_file)
-            session.pop("debug_normalized_file", None)
-            structured_text_file = session.get("structured_text_file")
-            if structured_text_file:
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, structured_text_file)
-            session.pop("structured_text_file", None)
-            sbd_file = session.get("sbd_file")
-            if sbd_file:
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, sbd_file)
-            session.pop("sbd_file", None)
-            tokens_file = session.get("tokens_file")
-            if tokens_file:
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, tokens_file)
-            session.pop("tokens_file", None)
-            pos_file = session.get("pos_file")
-            if pos_file:
-                self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, pos_file)
-            session.pop("pos_file", None)
-            session["result_ready"] = False
+            self._save_current_result_to_history()
+            self._clear_preview_and_results()
 
         response = make_response(
             render_template("upload.html", preview_url=preview_url, filename=filename)
@@ -321,6 +340,9 @@ class SistemWeb:
                 session.pop("sbd_file", None)
                 session.pop("tokens_file", None)
                 session.pop("pos_file", None)
+            session["history_saved"] = False
+            session.pop("saved_history_id", None)
+            session["result_token"] = secrets.token_urlsafe(24)
             session["result_ready"] = True
             return redirect(url_for("main.hasil_koreksi"))
 
@@ -360,6 +382,16 @@ class SistemWeb:
                 extracted_text=extracted_text,
                 detection_html=detection_html,
                 correction_text=correction_text,
+                document_name=session.get("current_file"),
+                auto_save_history=bool(session.get("user_id")),
+                back_url=url_for("main.upload_dokumen"),
+                back_label="Kembali",
+                download_url=url_for("main.unduh_hasil_koreksi"),
+                before_unload_url=(
+                    url_for("main.simpan_hasil_ke_riwayat")
+                    if session.get("user_id")
+                    else url_for("main.clear_preview")
+                ),
             )
         )
 
@@ -370,7 +402,18 @@ class SistemWeb:
         return self.auth_service.login()
 
     def tampilkan_riwayat(self):
-        return self.riwayat_service.ambil_riwayat()
+        pengguna_id = session.get("user_id")
+        if not pengguna_id:
+            return []
+        return self.riwayat_service.ambil_riwayat_pengguna(pengguna_id)
+
+    def simpan_hasil_ke_riwayat(self):
+        if not session.get("user_id"):
+            return {"status": "ignored", "saved": False}
+
+        riwayat = self._save_current_result_to_history()
+        self._clear_preview_and_results()
+        return {"status": "ok", "saved": bool(riwayat)}
 
 
 _sistem_web = SistemWeb()
@@ -382,6 +425,10 @@ def upload_dokumen():
 
 def hasil_koreksi():
     return _sistem_web.tampilkan_hasil()
+
+
+def simpan_hasil_ke_riwayat():
+    return _sistem_web.simpan_hasil_ke_riwayat()
 
 
 def uploaded_file(filename):
@@ -416,70 +463,7 @@ def unduh_hasil_koreksi():
 
 # Endpoint untuk membersihkan preview dan hasil terkait (opsional, bisa dipanggil via AJAX)
 def clear_preview():
-    current_file = session.get("current_file")
-    if current_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.UPLOAD_FOLDER, current_file)
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.DETECTION_RESULT_FOLDER,
-            f"{current_file}.txt",
-        )
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.DETECTION_RESULT_FOLDER,
-            f"{current_file}.highlight.html",
-        )
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.CORRECTION_RESULT_FOLDER,
-            f"{current_file}.txt",
-        )
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.txt")
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.json")
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.sbd.json")
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.tokens.json")
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.pos.json")
-    session["current_file"] = None
-    session.pop("preview_filename", None)
-    extracted_text_file = session.get("extracted_text_file")
-    if extracted_text_file:
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.DETECTION_RESULT_FOLDER,
-            extracted_text_file,
-        )
-    session.pop("extracted_text_file", None)
-    detection_html_file = session.get("detection_result_html_file")
-    if detection_html_file:
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.DETECTION_RESULT_FOLDER,
-            detection_html_file,
-        )
-    session.pop("detection_result_html_file", None)
-    correction_result_file = session.get("correction_result_file")
-    if correction_result_file:
-        _sistem_web.file_utils.remove_file_if_exists(
-            Config.CORRECTION_RESULT_FOLDER,
-            correction_result_file,
-        )
-    session.pop("correction_result_file", None)
-    debug_normalized_file = session.get("debug_normalized_file")
-    if debug_normalized_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, debug_normalized_file)
-    session.pop("debug_normalized_file", None)
-    structured_text_file = session.get("structured_text_file")
-    if structured_text_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, structured_text_file)
-    session.pop("structured_text_file", None)
-    sbd_file = session.get("sbd_file")
-    if sbd_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, sbd_file)
-    session.pop("sbd_file", None)
-    tokens_file = session.get("tokens_file")
-    if tokens_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, tokens_file)
-    session.pop("tokens_file", None)
-    pos_file = session.get("pos_file")
-    if pos_file:
-        _sistem_web.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, pos_file)
-    session.pop("pos_file", None)
-    session["result_ready"] = False
+    _sistem_web._clear_preview_and_results()
     return {"status": "ok"}
 
 

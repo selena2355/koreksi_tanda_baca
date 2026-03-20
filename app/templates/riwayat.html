@@ -14,10 +14,70 @@
 
 {% block content %}
     <section class="workspace">
-        <div class="result-card">
-            <div class="result-line short"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
+        {% with messages = get_flashed_messages(with_categories=True) %}
+        {% if messages %}
+        <div class="auth-alerts">
+            {% for category, message in messages %}
+            <div class="auth-alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="history-card">
+            <div class="history-header">
+                <h1 class="history-title">Daftar Riwayat Koreksi</h1>
+                <p class="history-subtitle">Pilih salah satu riwayat untuk membuka kembali halaman hasil.</p>
+            </div>
+
+            {% if riwayat_items %}
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Dokumen</th>
+                            <th>Hasil Deteksi</th>
+                            <th>Hasil Koreksi</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in riwayat_items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a class="history-link" href="{{ url_for('riwayat.detail_riwayat_page', riwayat_id=item.id) }}">
+                                    <strong>{{ item.nama_dokumen }}</strong>
+                                    <span>{{ item.created_at.strftime('%d %b %Y %H:%M') }}</span>
+                                </a>
+                            </td>
+                            <td>
+                                <a class="history-link" href="{{ url_for('riwayat.detail_riwayat_page', riwayat_id=item.id) }}">
+                                    {{ item.hasil_deteksi_html | striptags | trim | truncate(150, True, '...') }}
+                                </a>
+                            </td>
+                            <td>
+                                <a class="history-link" href="{{ url_for('riwayat.detail_riwayat_page', riwayat_id=item.id) }}">
+                                    {{ item.hasil_koreksi_text | trim | truncate(150, True, '...') }}
+                                </a>
+                            </td>
+                            <td>
+                                <form method="post" action="{{ url_for('riwayat.hapus_riwayat', riwayat_id=item.id) }}">
+                                    <button class="history-delete-button" type="submit">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="history-empty">
+                <p>Belum ada riwayat koreksi yang tersimpan.</p>
+                <a class="check-button" href="{{ url_for('main.upload_dokumen') }}">Mulai Unggah Dokumen</a>
+            </div>
+            {% endif %}
         </div>
     </section>
 {% endblock %}

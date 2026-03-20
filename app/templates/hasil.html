@@ -9,48 +9,71 @@
 {% endblock %}
 
 {% block scripts %}
+    {% if before_unload_url %}
     <script>
-        let skipClear = false;
+        let skipBeforeUnload = false;
         const downloadLink = document.getElementById("download-link");
         if (downloadLink) {
             downloadLink.addEventListener("click", () => {
-                skipClear = true;
+                skipBeforeUnload = true;
                 window.setTimeout(() => {
-                    skipClear = false;
+                    skipBeforeUnload = false;
                 }, 5000);
             });
         }
+
         window.addEventListener("beforeunload", () => {
-            if (skipClear) {
+            if (skipBeforeUnload) {
                 return;
             }
-            fetch("{{ url_for('main.clear_preview') }}", { method: "POST" }).catch(() => {});
+
+            fetch("{{ before_unload_url }}", {
+                method: "POST",
+                keepalive: true,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: "{}"
+            }).catch(() => {});
         });
     </script>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
-<section class="result-grid">
-    <div class="result-block">
-        <div class="result-title">Hasil Deteksi</div>
-        <div class="result-card">
-            {% if detection_html %}
-                <pre class="result-content">{{ detection_html | safe }}</pre>
-            {% else %}
-                <pre class="result-content">{{ extracted_text }}</pre>
-            {% endif %}
-        </div>
-        <button class="back-button" type="button" onclick="history.back();">Kembali</button>
+<section class="workspace result-workspace">
+    {% if document_name %}
+    <div class="result-meta">
+        <span class="result-doc-label">Dokumen</span>
+        <strong>{{ document_name }}</strong>
+        {% if auto_save_history %}
+        <span class="result-saving-note">Hasil akan otomatis disimpan ke riwayat saat Anda keluar dari halaman ini.</span>
+        {% endif %}
     </div>
+    {% endif %}
 
-    <div class="result-block">
-        <div class="result-title">Hasil Koreksi</div>
-        <div class="result-card">
-            {% if correction_text %}
-                <pre class="result-content">{{ correction_text }}</pre>
-            {% endif %}
+    <section class="result-grid">
+        <div class="result-block">
+            <div class="result-title">Hasil Deteksi</div>
+            <div class="result-card">
+                {% if detection_html %}
+                    <pre class="result-content">{{ detection_html | safe }}</pre>
+                {% else %}
+                    <pre class="result-content">{{ extracted_text }}</pre>
+                {% endif %}
+            </div>
+            <a class="back-button" href="{{ back_url }}">{{ back_label }}</a>
         </div>
-        <a id="download-link" class="download-button" href="{{ url_for('main.unduh_hasil_koreksi') }}">Unduh</a>
-    </div>
+
+        <div class="result-block">
+            <div class="result-title">Hasil Koreksi</div>
+            <div class="result-card">
+                {% if correction_text %}
+                    <pre class="result-content">{{ correction_text }}</pre>
+                {% endif %}
+            </div>
+            <a id="download-link" class="download-button" href="{{ download_url }}">Unduh</a>
+        </div>
+    </section>
 </section>
 {% endblock %}

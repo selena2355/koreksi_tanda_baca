@@ -10,14 +10,15 @@ class BaseRule:
 
     id = "base"
 
-    _RE_SPACE_BEFORE = re.compile(r"\s+([.,;:?!])")
-    _RE_MISSING_SPACE_AFTER = re.compile(r"([.,;:])(?=[A-Za-z0-9])")
+    _RE_SPACE_BEFORE = re.compile(r"\s+([.,:?!])")
+    _RE_MISSING_SPACE_AFTER = re.compile(r"([.,:])(?=[A-Za-z0-9])")
     _RE_REPEATED_PUNCT = re.compile(r"([.!?])\1+")
 
     def cek(self, teks, konteks=None):
         if not teks:
             return []
 
+        # Menyimpan hasil deteksi dalam satu list untuk memudahkan pengurutan berdasarkan posisi.
         hasil = []
         hasil.extend(self._cek_spasi_sebelum_tanda_baca(teks))
         hasil.extend(self._cek_spasi_setelah_tanda_baca(teks))
@@ -95,6 +96,7 @@ class BaseRule:
         prev_char = teks[idx - 1] if idx > 0 else ""
         next_char = teks[idx + 1] if idx + 1 < len(teks) else ""
 
+        # Jika karakter setelah tanda baca bukan alfanumerik, abaikan (tidak perlu spasi).
         if not next_char or not next_char.isalnum():
             return True
 
