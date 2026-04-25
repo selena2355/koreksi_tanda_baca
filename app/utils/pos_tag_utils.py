@@ -9,6 +9,7 @@ from ..config import ROOT_DIR
 
 
 class POSTagger:
+    # Inisialisasi dengan memilih engine (stanza atau fallback sederhana)
     def __init__(self, lang=None, model_dir=None, auto_download=None, batch_size=None):
         if stanza is None:
             raise RuntimeError("Stanza belum terpasang. Install dengan: pip install stanza")
@@ -35,6 +36,7 @@ class POSTagger:
         self.batch_size = batch_size if batch_size and batch_size > 0 else None
         self._pipeline = None
 
+    # Fungsi utama untuk tagging list of token lists (pre-tokenized sentences)
     def tag_tokens(self, token_lists):
         token_lists = self._normalize_token_lists(token_lists)
         if not token_lists:
@@ -49,7 +51,8 @@ class POSTagger:
             return results
 
         return self._tag_batch(pipeline, token_lists)
-
+    
+    # Fungsi tambahan untuk tagging teks mentah (akan di-tokenize terlebih dahulu)
     def _get_pipeline(self):
         if self._pipeline is not None:
             return self._pipeline
@@ -75,6 +78,7 @@ class POSTagger:
         )
         return self._pipeline
 
+    # Normalisasi input token lists: pastikan format yang konsisten untuk diproses oleh Stanza
     def _normalize_token_lists(self, token_lists):
         if not token_lists:
             return []
@@ -93,6 +97,7 @@ class POSTagger:
                 cleaned.append(tokens)
         return cleaned
 
+    # Fungsi untuk tagging batch token lists menggunakan pipeline Stanza
     def _tag_batch(self, pipeline, token_lists):
         try:
             doc = pipeline(token_lists)

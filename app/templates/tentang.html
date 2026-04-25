@@ -13,11 +13,388 @@
 {% endblock %}
 
 {% block content %}
-    <section class="workspace">
-        <div class="result-card">
-            <div class="result-line short"></div>
-            <div class="result-line"></div>
-            <div class="result-line"></div>
+    <section class="about-workspace">
+        <!-- Tab Navigation -->
+        <div class="about-tabs">
+            <button class="about-tab-button active" data-tab="deskripsi">Deskripsi Sistem</button>
+            <button class="about-tab-button" data-tab="batasan">Batasan Sistem</button>
+            <button class="about-tab-button" data-tab="aturan">Aturan yang Digunakan</button>
+        </div>
+
+        <!-- Deskripsi Sistem Section -->
+        <div id="deskripsi" class="about-tab-content active">
+            <div class="result-card">
+                <h2>Deskripsi Sistem</h2>
+                <p>Sistem yang dikembangkan dalam penelitian ini merupakan aplikasi berbasis web yang berfungsi untuk mendeteksi dan mengoreksi kesalahan penggunaan tanda baca dalam karya tulis ilmiah berbahasa Indonesia sesuai dengan kaidah Ejaan yang Disempurnakan Edisi Kelima (EYD V). Aplikasi ini dirancang menggunakan pendekatan rule-based (berbasis aturan), di mana setiap proses analisis dan koreksi didasarkan pada aturan linguistik yang telah didefinisikan secara eksplisit.</p>
+
+                <p>Secara umum, sistem bekerja melalui beberapa tahapan utama yang saling terintegrasi. Tahap pertama adalah input dokumen, di mana pengguna mengunggah file karya ilmiah dalam format PDF melalui antarmuka web. Selanjutnya, sistem melakukan ekstraksi teks dari dokumen menggunakan library pemrosesan PDF untuk mengubah dokumen menjadi teks mentah yang dapat diproses lebih lanjut.</p>
+
+                <p>Tahap berikutnya adalah preprocessing teks yang meliputi normalisasi karakter, deteksi batas kalimat (sentence boundary detection), tokenisasi, serta pelabelan kelas kata (Part-of-Speech tagging). Tahapan ini bertujuan untuk mempersiapkan struktur teks agar dapat dianalisis secara linguistik oleh sistem.</p>
+
+                <p>Setelah preprocessing, sistem akan melakukan proses deteksi kesalahan tanda baca menggunakan aturan-aturan yang telah dirancang berdasarkan EYD V. Aturan tersebut diimplementasikan menggunakan teknik ekspresi reguler (Regular Expression) dan analisis konteks sederhana berdasarkan struktur kalimat. Jika ditemukan kesalahan, sistem juga akan menentukan bentuk perbaikan yang sesuai.</p>
+
+                <p>Hasil dari proses sistem disajikan dalam dua bentuk keluaran. Pertama, hasil deteksi berupa teks asli yang telah diberi penyorotan (highlight) pada bagian yang mengandung kesalahan, disertai penjelasan jenis kesalahan dan saran perbaikan. Kedua, hasil koreksi berupa teks yang telah diperbaiki secara otomatis sesuai dengan aturan EYD V, yang dapat diunduh oleh pengguna dalam format teks.</p>
+
+                <p>Aplikasi ini dibangun menggunakan bahasa pemrograman Python dengan framework Flask sebagai backend, serta memanfaatkan teknologi web untuk antarmuka pengguna. Dengan sistem ini, diharapkan pengguna dapat melakukan pemeriksaan tanda baca secara lebih cepat, konsisten, dan sesuai dengan kaidah bahasa Indonesia yang berlaku.</p>
+            </div>
+        </div>
+
+        <!-- Batasan Sistem Section -->
+        <div id="batasan" class="about-tab-content">
+            <div class="result-card">
+                <h2>Batasan Sistem</h2>
+                <ol>
+                    <li>Dokumen yang dianalisis adalah dokumen berbahasa Indonesia, terutama karya ilmiah seperti skripsi, makalah, atau artikel akademik.</li>
+                    <li>Dokumen yang dianalisis terbatas pada dokumen berformat PDF.</li>
+                    <li>Sistem berfokus pada koreksi tanda baca sesuai aturan EYD V: titik, koma, titik dua, tanda hubung, tanda petik, tanda tanya, dan tanda seru.</li>
+                    <li>Sistem tidak mencakup koreksi ejaan kata, struktur kalimat, atau konsistensi istilah.</li>
+                    <li>Sistem menghasilkan 2 keluaran, yaitu: teks asli dengan sorotan (highlight) pada kesalahan, dan teks yang sudah diperbaiki sesuai aturan EYD V.</li>
+                    <li>Evaluasi menggunakan data teks akademik yang ada atau data dummy yang disusun untuk menguji aturan.</li>
+                    <li>Implementasi sistem berbasis web menggunakan framework (kerangka kerja) Flask.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Aturan yang Digunakan Section -->
+        <div id="aturan" class="about-tab-content">
+            <div class="result-card">
+                <h2>Aturan yang Digunakan</h2>
+                
+                <!-- Sub-tab Navigation -->
+                <div class="about-sub-tabs">
+                    <button class="about-sub-tab-button active" data-subtab="aturan-tanda-baca">Aturan Tanda Baca</button>
+                    <button class="about-sub-tab-button" data-subtab="aturan-deteksi">Aturan Deteksi</button>
+                </div>
+
+                <!-- Aturan Tanda Baca -->
+                <div id="aturan-tanda-baca" class="about-sub-tab-content active">
+                    <h3>Tabel 1: Base Rule (Aturan Dasar)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V (Deskripsi)</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BR1</td>
+                                <td>Kesalahan</td>
+                                <td>Titik, Koma, Titik Dua, Tanda Tanya, Tanda Seru</td>
+                                <td>Tanda baca tidak didahului spasi</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>BR2</td>
+                                <td>Pengecualian</td>
+                                <td>Titik, Koma, Titik Dua</td>
+                                <td>Tanda baca harus diikuti spasi</td>
+                                <td>Akhir paragraf, URL, skala, galar, bilangan, dan perbandingan</td>
+                            </tr>
+                            <tr>
+                                <td>BR3</td>
+                                <td>Kesalahan</td>
+                                <td>Tanda seru dan Tanda Tanya</td>
+                                <td>Tanda baca tidak digunakan berulang</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 2: Dot Rule (Aturan Titik)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>DR1</td>
+                                <td>Pengecualian</td>
+                                <td>Titik</td>
+                                <td>Digunakan pada akhir kalimat pernyataan</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>DR2</td>
+                                <td>Pengecualian</td>
+                                <td>Titik</td>
+                                <td>Digunakan di belakang singkatan nama orang</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>DR3</td>
+                                <td>Pengecualian</td>
+                                <td>Titik</td>
+                                <td>Digunakan pada singkatan yang umum (dak., dlm., dsb.)</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>DR4</td>
+                                <td>Pengecualian</td>
+                                <td>Titik</td>
+                                <td>Digunakan di belakang singkatan umum (dok., dlm., dsb.)</td>
+                                <td>Singkatan yang tidak perlu penanda pita (PT, CV, SIM, dll.)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 3: Commas Rule (Aturan Koma)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CmR1</td>
+                                <td>Pengecualian</td>
+                                <td>Koma</td>
+                                <td>Digunakan diantara unsur-unsur dalam perincian (>3 unsur)</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CmR2</td>
+                                <td>Pengecualian</td>
+                                <td>Koma</td>
+                                <td>Digunakan untuk memisahkan anak kalimat yang mendahului anak kalimat</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CmR3</td>
+                                <td>Pengecualian</td>
+                                <td>Koma</td>
+                                <td>Digunakan sebelum kata penghubung antarkalimat</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CmR4</td>
+                                <td>Pengecualian</td>
+                                <td>Koma</td>
+                                <td>Digunakan di belakang kata penghubung antarkalimat</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 4: Question Rule (Aturan Tanda Tanya)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>QsR1</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Tanya</td>
+                                <td>Digunakan pada akhir kalimat tanya</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>QsR2</td>
+                                <td>Kesalahan</td>
+                                <td>Tanda Tanya</td>
+                                <td>Tidak digunakan pada kalimat tanya tak langsung</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 5: Exclamation Rule (Aturan Tanda Seru)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ExR1</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Seru</td>
+                                <td>Digunakan sesudah ungkapan seruan atau perintah</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 6: Quotation Rule (Aturan Tanda Petik)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>QrR1</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Petik</td>
+                                <td>Digunakan untuk mengapit seutas langsung</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>QrR2</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Petik</td>
+                                <td>Harus berpasangan (lambang dan penutup)</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>QrR3</td>
+                                <td>Kesalahan</td>
+                                <td>Tanda Petik</td>
+                                <td>Tidak memiliki spasi setelah pembuka atau sebelum penutup</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 7: Colon Rule (Aturan Titik Dua)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CnR1</td>
+                                <td>Pengecualian</td>
+                                <td>Titik Dua</td>
+                                <td>Digunakan di akhir pernyataan lengkap yang diikuti perincian</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CnR2</td>
+                                <td>Pengecualian</td>
+                                <td>Titik Dua</td>
+                                <td>Digunakan untuk memisahkan jilid dari nomor halaman</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>CnR3</td>
+                                <td>Kesalahan</td>
+                                <td>Titik Dua</td>
+                                <td>Tidak digunakan setelah kata yang dikuti daftar berjenjang</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 8: Hyphen Rule (Aturan Tanda Hubung)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Kategori</th>
+                                <th>Tanda Baca</th>
+                                <th>Aturan EYD V</th>
+                                <th>Pengecualian</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>H-R1</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Hubung</td>
+                                <td>Digunakan untuk menyambung unsur kata ulang</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>H-R2</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Hubung</td>
+                                <td>Digunakan untuk merangkai tanggal dengan pernyataan dengan tanda yang dinyatakan dengan angka</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>H-R3</td>
+                                <td>Pengecualian</td>
+                                <td>Tanda Hubung</td>
+                                <td>Tidak digunakan setelah kata kerja atau proposisi langsung sebelum objek</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>H-R4</td>
+                                <td>Kesalahan</td>
+                                <td>Tanda Hubung</td>
+                                <td>Tidak didahului atau diikuti dengan spasi</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Aturan Deteksi -->
+                <div id="aturan-deteksi" class="about-sub-tab-content">
+                    <p style="text-align: center; color: rgba(6, 35, 61, 0.6); padding: 40px 20px;">Bagian ini akan segera ditambahkan.</p>
+                </div>
+            </div>
         </div>
     </section>
+
+    <script>
+        // Tab navigation functionality
+        document.querySelectorAll('.about-tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and contents
+                document.querySelectorAll('.about-tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.about-tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Sub-tab navigation functionality (for Aturan section)
+        document.querySelectorAll('.about-sub-tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const subtabName = button.getAttribute('data-subtab');
+                
+                // Remove active class from all sub-buttons and contents within parent
+                const parent = button.closest('.about-tab-content');
+                parent.querySelectorAll('.about-sub-tab-button').forEach(btn => btn.classList.remove('active'));
+                parent.querySelectorAll('.about-sub-tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(subtabName).classList.add('active');
+            });
+        });
+    </script>
 {% endblock %}

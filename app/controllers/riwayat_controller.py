@@ -37,6 +37,7 @@ class RiwayatController:
             extracted_text=riwayat.teks_dokumen,
             detection_html=riwayat.hasil_deteksi_html,
             correction_text=riwayat.hasil_koreksi_text,
+            correction_html=riwayat.hasil_koreksi_html,
             document_name=riwayat.nama_dokumen,
             auto_save_history=False,
             back_url=url_for("riwayat.riwayat_page"),

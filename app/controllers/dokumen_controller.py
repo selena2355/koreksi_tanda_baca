@@ -7,9 +7,11 @@
     send_from_directory,
     session,
     make_response,
-)
-import os
-import secrets
+) 
+import os 
+import secrets # Digunakan untuk generate token unik untuk hasil pemeriksaan saat ini
+from io import BytesIO
+from docx import Document
 
 from ..config import Config
 from ..services.ekstraksi_teks_service import TextExtractor
@@ -23,6 +25,8 @@ from ..utils.docx_utils import DocxUtils
 
 
 class SistemWeb:
+    # Fungsi untuk menginisialisasi layanan pemeriksaan dokumen dengan opsi untuk menyuntikkan layanan preprocessing,
+    # koreksi, dan aturan deteksi yang dapat disesuaikan, atau menggunakan default jika tidak diberikan.
     def __init__(
         self,
         pemeriksaan_service=None,
@@ -47,6 +51,7 @@ class SistemWeb:
         self.auth_service = auth_service or AuthService()
         self.riwayat_service = riwayat_service or RiwayatService()
 
+    # Fungsi untuk membersihkan file hasil pemeriksaan sebelumnya agar tidak menumpuk di server
     def _cleanup_current_result_files(self):
         current_file = session.get("current_file")
         if current_file:
@@ -67,6 +72,10 @@ class SistemWeb:
             self.file_utils.remove_file_if_exists(
                 Config.CORRECTION_RESULT_FOLDER,
                 f"{current_file}.txt",
+            )
+            self.file_utils.remove_file_if_exists(
+                Config.CORRECTION_RESULT_FOLDER,
+                f"{current_file}.correction.highlight.html",
             )
             self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.txt")
             self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, f"{current_file}.json")
@@ -95,6 +104,13 @@ class SistemWeb:
                 correction_result_file,
             )
 
+        correction_result_html_file = session.get("correction_result_html_file")
+        if correction_result_html_file:
+            self.file_utils.remove_file_if_exists(
+                Config.CORRECTION_RESULT_FOLDER,
+                correction_result_html_file,
+            )
+
         debug_normalized_file = session.get("debug_normalized_file")
         if debug_normalized_file:
             self.file_utils.remove_file_if_exists(Config.DEBUG_FOLDER, debug_normalized_file)
@@ -121,6 +137,8 @@ class SistemWeb:
         session.pop("extracted_text_file", None)
         session.pop("detection_result_html_file", None)
         session.pop("correction_result_file", None)
+        session.pop("correction_result_html_file", None)
+        session.pop("koreksi_text", None)
         session.pop("debug_normalized_file", None)
         session.pop("structured_text_file", None)
         session.pop("sbd_file", None)
@@ -143,6 +161,7 @@ class SistemWeb:
             and session.get("current_file")
             and session.get("detection_result_html_file")
             and session.get("correction_result_file")
+            and session.get("correction_result_html_file")
         )
 
     def _save_current_result_to_history(self):
@@ -209,6 +228,42 @@ class SistemWeb:
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
         return response
+    
+    # Fungsi tambahan untuk mengubah output POS tag dari Stanza menjadi format yang lebih sederhana untuk digunakan dalam pemeriksaan aturan
+    def _flatten_pos_tags(self, pos_tags, normalized_text):
+        """
+        Konversi output POSTagger (list of list of dict) ke format flat
+        yang dibutuhkan TitikRule: list of dict dengan key text, upos,
+        start_char, end_char.
+        """
+        flat = []
+        search_start = 0
+        for sent in pos_tags:
+            for tag in sent:
+                word = tag["token"]
+                # Cari posisi token di teks asli mulai dari search_start
+                idx = normalized_text.find(word, search_start)
+                if idx == -1:
+                    # Kalau tidak ketemu, skip tapi jangan geser search_start
+                    flat.append({
+                        "text": word,
+                        "upos": tag["upos"],
+                        "xpos": tag["xpos"],
+                        "lemma": tag.get("lemma", ""),
+                        "start_char": -1,
+                        "end_char": -1,
+                    })
+                    continue
+                flat.append({
+                    "text": word,
+                    "upos": tag["upos"],
+                    "xpos": tag["xpos"],
+                    "lemma": tag.get("lemma", ""),
+                    "start_char": idx,
+                    "end_char": idx + len(word),
+                })
+                search_start = idx + len(word)
+        return flat
 
     # Endpoint untuk menampilkan hasil deteksi dan koreksi
     def tampilkan_hasil(self):
@@ -225,6 +280,7 @@ class SistemWeb:
 
             text_filename = f"{current_file}.txt"
             detection_html_filename = f"{current_file}.highlight.html"
+            correction_html_filename = f"{current_file}.correction.highlight.html"
             json_filename = f"{current_file}.json"
             sbd_filename = f"{current_file}.sbd.json"
             tokens_filename = f"{current_file}.tokens.json"
@@ -248,13 +304,15 @@ class SistemWeb:
 
             # Normalisasi teks hasil ekstraksi (DOCX only)
             normalized_text = self.preprocessing_service.preprocessing(extracted_text)
+            analysis_text = self.preprocessing_service.prepare_rule_text(normalized_text)
 
             sentences = []
             structured_text = []
             tokens = []
             pos_tags = []
+            flat_tokens = []
             try:
-                sentences = self.preprocessing_service.segment_sentences(normalized_text)
+                sentences = self.preprocessing_service.segment_sentences(analysis_text)
             except Exception:
                 sentences = []
                 flash("Gagal melakukan Sentence Boundary Detection (SBD).")
@@ -285,13 +343,18 @@ class SistemWeb:
 
             try:
                 pos_tags = self.preprocessing_service.pos_tag_tokens(tokens)
+                flat_tokens = self._flatten_pos_tags(pos_tags, normalized_text)
             except Exception as exc:
                 pos_tags = []
                 flash(str(exc) or "Gagal melakukan POS tagging.")
 
-            deteksi_result = self.pemeriksaan_service.deteksi_dan_koreksi(normalized_text)
+            deteksi_result = self.pemeriksaan_service.deteksi_dan_koreksi(
+                normalized_text,
+                konteks={"tokens": flat_tokens}
+            )
             koreksi_text = deteksi_result["koreksi_text"]
             detection_html = deteksi_result["detection_html"]
+            correction_html = deteksi_result["correction_html"]
             if deteksi_result["error"]:
                 flash(deteksi_result["error"])
 
@@ -316,6 +379,13 @@ class SistemWeb:
                 koreksi_text,
             )
             session["correction_result_file"] = text_filename
+            session["koreksi_text"] = koreksi_text  # Simpan teks koreksi untuk download DOCX
+            self.file_utils.write_text_file(
+                Config.CORRECTION_RESULT_FOLDER,
+                correction_html_filename,
+                correction_html,
+            )
+            session["correction_result_html_file"] = correction_html_filename
 
             # Simpan file debug jika DEBUG_SAVE aktif
             if Config.DEBUG_SAVE:
@@ -376,12 +446,22 @@ class SistemWeb:
             if correction_result_file
             else ""
         )
+        correction_result_html_file = session.get("correction_result_html_file")
+        correction_html = (
+            self.file_utils.read_text_file(
+                Config.CORRECTION_RESULT_FOLDER,
+                correction_result_html_file,
+            )
+            if correction_result_html_file
+            else ""
+        )
         response = make_response(
             render_template(
                 "hasil.html",
                 extracted_text=extracted_text,
                 detection_html=detection_html,
                 correction_text=correction_text,
+                correction_html=correction_html,
                 document_name=session.get("current_file"),
                 auto_save_history=bool(session.get("user_id")),
                 back_url=url_for("main.upload_dokumen"),
@@ -440,21 +520,31 @@ def uploaded_file(filename):
 
 
 def unduh_hasil_koreksi():
-    correction_file = session.get("correction_result_file")
-    if not correction_file:
+    koreksi_text = session.get("koreksi_text")
+    if not koreksi_text:
         flash("Hasil koreksi tidak tersedia.")
         return redirect(url_for("main.upload_dokumen"))
 
-    file_path = os.path.join(Config.CORRECTION_RESULT_FOLDER, correction_file)
-    if not os.path.exists(file_path):
-        flash("File hasil koreksi tidak ditemukan.")
-        return redirect(url_for("main.upload_dokumen"))
-
-    response = send_from_directory(
-        Config.CORRECTION_RESULT_FOLDER,
-        correction_file,
-        as_attachment=True,
-    )
+    # Generate DOCX in memory
+    doc = Document()
+    
+    # Split text by lines and add to document
+    lines = koreksi_text.split('\n')
+    for line in lines:
+        if line.strip():  # Only add non-empty lines
+            doc.add_paragraph(line)
+        else:
+            doc.add_paragraph()  # Add empty paragraph to preserve spacing
+    
+    # Save to BytesIO buffer
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    
+    # Create response with DOCX file
+    response = make_response(buffer.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=hasil_koreksi.docx"
+    response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

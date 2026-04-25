@@ -6,6 +6,7 @@ from ..utils.file_utils import FileUtils
 
 
 class AuthController:
+    # Inisialisasi controller dengan service dan utilitas yang diperlukan
     def __init__(self, riwayat_service=None, file_utils=None):
         self.riwayat_service = riwayat_service or RiwayatService()
         self.file_utils = file_utils or FileUtils()

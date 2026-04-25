@@ -1,6 +1,7 @@
 from ..config import Config
 from ..extensions import db
 from ..models import RiwayatKoreksi
+from sqlalchemy.exc import IntegrityError
 
 
 class RiwayatService:
@@ -12,6 +13,7 @@ class RiwayatService:
         teks_dokumen,
         hasil_deteksi_html,
         hasil_koreksi_text,
+        hasil_koreksi_html,
     ):
         riwayat = RiwayatKoreksi.query.filter_by(result_token=result_token).first()
         if riwayat:
@@ -24,10 +26,16 @@ class RiwayatService:
             teks_dokumen=teks_dokumen or "",
             hasil_deteksi_html=hasil_deteksi_html or "",
             hasil_koreksi_text=hasil_koreksi_text or "",
+            hasil_koreksi_html=hasil_koreksi_html or "",
         )
         db.session.add(riwayat)
-        db.session.commit()
-        return riwayat
+        
+        try:
+            db.session.commit()
+            return riwayat
+        except IntegrityError:
+            db.session.rollback()
+            return RiwayatKoreksi.query.filter_by(result_token=result_token).first()
 
     def simpan_dari_session(self, pengguna_id, session_data, file_utils):
         nama_dokumen = session_data.get("current_file") or session_data.get("preview_filename")
@@ -35,8 +43,15 @@ class RiwayatService:
         extracted_text_file = session_data.get("extracted_text_file")
         detection_html_file = session_data.get("detection_result_html_file")
         correction_result_file = session_data.get("correction_result_file")
+        correction_result_html_file = session_data.get("correction_result_html_file")
 
-        if not result_token or not nama_dokumen or not detection_html_file or not correction_result_file:
+        if (
+            not result_token
+            or not nama_dokumen
+            or not detection_html_file
+            or not correction_result_file
+            or not correction_result_html_file
+        ):
             return None
 
         teks_dokumen = (
@@ -52,8 +67,12 @@ class RiwayatService:
             Config.CORRECTION_RESULT_FOLDER,
             correction_result_file,
         )
+        hasil_koreksi_html = file_utils.read_text_file(
+            Config.CORRECTION_RESULT_FOLDER,
+            correction_result_html_file,
+        )
 
-        if not hasil_deteksi_html and not hasil_koreksi_text:
+        if not hasil_deteksi_html and not hasil_koreksi_text and not hasil_koreksi_html:
             return None
 
         return self.simpan_riwayat(
@@ -63,6 +82,7 @@ class RiwayatService:
             teks_dokumen=teks_dokumen,
             hasil_deteksi_html=hasil_deteksi_html,
             hasil_koreksi_text=hasil_koreksi_text,
+            hasil_koreksi_html=hasil_koreksi_html,
         )
 
     def ambil_riwayat_pengguna(self, pengguna_id):

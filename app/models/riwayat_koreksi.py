@@ -13,6 +13,7 @@ class RiwayatKoreksi(db.Model):
     teks_dokumen = db.Column(db.Text, nullable=False)
     hasil_deteksi_html = db.Column(db.Text, nullable=False)
     hasil_koreksi_text = db.Column(db.Text, nullable=False)
+    hasil_koreksi_html = db.Column(db.Text, nullable=False, default="")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     pengguna = db.relationship("Pengguna", back_populates="riwayat_koreksi")

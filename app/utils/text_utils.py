@@ -91,10 +91,12 @@ class TextNormalizer:
         return self.normalize_structured_docx(paragraphs)
 
     def _is_heading(self, line: str) -> bool:
+        # Jika line hanya terdiri dari huruf kapital dan spasi, dan panjangnya kurang dari 80 karakter, anggap sebagai heading.
         if re.match(r"^\d+(\.\d+)*\s+", line):
             return True
         if line.isupper() and len(line) < 80:
             return True
+        # Cek rasio kata kapital - jika sebagian besar kata diawali huruf kapital, dan panjangnya tidak terlalu panjang, anggap sebagai heading.
         words = [w for w in line.split() if w.isalpha()]
         if words and len(words) <= 10:
             capital_ratio = sum(1 for w in words if w[0].isupper()) / len(words)
@@ -103,10 +105,13 @@ class TextNormalizer:
         return False
 
     def _is_list_item(self, line: str) -> bool:
+        # Cek marker list numerik (1. , 2. , etc.)
         if re.match(r"^\d+\.\s+", line):
             return True
+        # Cek marker list umum: bullet (•), dash (-), atau letter + dot (a. , b. , etc.)
         if re.match(r"^[-\u2022*\u2013]\s+", line):
             return True
+        # Cek marker list letter + dot (a. , b. , etc.)
         if re.match(r"^[a-z]\.\s+", line):
             return True
         return False

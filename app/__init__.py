@@ -8,7 +8,7 @@ from .routes.riwayat_routes import riwayat_bp
 from .extensions import db, migrate
 
 
-
+# Fungsi untuk membuat dan mengkonfigurasi aplikasi Flask
 def create_app():
     app = Flask(
         __name__,

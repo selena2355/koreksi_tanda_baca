@@ -339,6 +339,13 @@ body {
     gap: 26px;
 }
 
+.about-workspace {
+    width: min(1300px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
 .result-workspace {
     width: min(1100px, 100%);
 }
@@ -598,10 +605,31 @@ body {
 }
 
 .error-highlight {
-    background: rgba(255, 214, 165, 0.6);
+    background: rgba(182, 15, 15, 0.567);
     border-radius: 4px;
     padding: 0 2px;
-    cursor: help;
+}
+
+.correction-highlight {
+    background: rgba(76, 175, 80, 0.38);
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+.linked-highlight {
+    cursor: pointer;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.linked-highlight:hover,
+.linked-highlight:focus-visible {
+    box-shadow: 0 0 0 2px rgba(3, 4, 94, 0.2);
+    outline: none;
+}
+
+.linked-highlight.is-linked-active {
+    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.35);
+    transform: translateY(-1px);
 }
 
 .download-button {
@@ -739,6 +767,169 @@ body {
     color: rgba(6, 35, 61, 0.72);
 }
 
+.result-card h3 {
+    margin: 28px 0 16px;
+    font-size: 1.1rem;
+    color: var(--navy);
+    font-weight: 600;
+}
+
+.result-card h3:first-of-type {
+    margin-top: 0;
+}
+
+.result-card p {
+    margin: 0 0 16px;
+    line-height: 1.68;
+    color: rgba(6, 35, 61, 0.85);
+    text-align: justify;
+}
+
+.result-card ol {
+    padding-left: 24px;
+    color: rgba(6, 35, 61, 0.85);
+}
+
+.result-card ol li {
+    margin-bottom: 10px;
+    line-height: 1.6;
+    text-align: justify;
+}
+
+.rule-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(3, 4, 94, 0.08);
+}
+
+.rule-table thead {
+    background: linear-gradient(90deg, rgba(0, 119, 182, 0.12), rgba(0, 180, 216, 0.12));
+    border-bottom: 2px solid rgba(0, 119, 182, 0.2);
+}
+
+.rule-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.rule-table td {
+    padding: 12px 16px;
+    color: rgba(6, 35, 61, 0.8);
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(3, 4, 94, 0.06);
+}
+
+.rule-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.rule-table tbody tr:hover {
+    background: rgba(144, 224, 239, 0.15);
+}
+
+.rule-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Tab Navigation Styles */
+.about-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid rgba(0, 119, 182, 0.15);
+}
+
+.about-tab-button {
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--navy);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    font-size: 0.95rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    bottom: -2px;
+}
+
+.about-tab-button:hover {
+    color: var(--blue);
+}
+
+.about-tab-button.active {
+    color: var(--blue);
+    border-bottom-color: var(--blue);
+}
+
+.about-tab-content {
+    display: none;
+}
+
+.about-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Sub-tab Navigation Styles */
+.about-sub-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    margin-top: 24px;
+    border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+}
+
+.about-sub-tab-button {
+    padding: 10px 16px;
+    border: none;
+    background: rgba(0, 119, 182, 0.08);
+    color: var(--navy);
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-radius: 10px 10px 0 0;
+    transition: all 0.2s ease;
+}
+
+.about-sub-tab-button:hover {
+    background: rgba(0, 119, 182, 0.12);
+}
+
+.about-sub-tab-button.active {
+    background: rgba(0, 180, 216, 0.2);
+    color: var(--blue);
+    border-bottom: 2px solid var(--blue);
+}
+
+.about-sub-tab-content {
+    display: none;
+}
+
+.about-sub-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
 @media (max-width: 720px) {
     .top-bar {
         flex-direction: column;
@@ -775,5 +966,40 @@ body {
 
     .history-card {
         padding: 22px 18px;
+    }
+
+    .rule-table {
+        font-size: 0.8rem;
+        margin-bottom: 20px;
+    }
+
+    .rule-table th {
+        padding: 10px 8px;
+        font-size: 0.8rem;
+    }
+
+    .rule-table td {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    .about-tabs {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .about-tab-button {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+    }
+
+    .about-sub-tabs {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .about-sub-tab-button {
+        padding: 8px 12px;
+        font-size: 0.8rem;
     }
 }

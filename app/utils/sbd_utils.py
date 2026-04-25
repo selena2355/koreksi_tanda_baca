@@ -57,6 +57,7 @@ class SentenceBoundaryDetector:
 
     CLOSING_CHARS = set(")]}'\"")
 
+    # Inisialisasi dengan memilih engine (rule-based atau stanza)
     def __init__(self, engine=None):
         self.engine = (engine or os.getenv("SBD_ENGINE", "rule")).strip().lower()
         self._pipeline = None
@@ -64,6 +65,7 @@ class SentenceBoundaryDetector:
         self._stanza_dir = os.getenv("STANZA_DIR", os.path.join(ROOT_DIR, "models", "stanza"))
         self._auto_download = os.getenv("STANZA_AUTO_DOWNLOAD", "0") == "1"
 
+    # Deteksi kalimat menggunakan engine yang dipilih
     def segment_sentences(self, text):
         if not text:
             return []
@@ -73,6 +75,7 @@ class SentenceBoundaryDetector:
             return [sent.text for sent in doc.sentences]
         return self._segment_with_rules(text)
 
+    # Mendapatkan atau membuat pipeline Stanza untuk tokenisasi
     def _get_stanza_pipeline(self):
         if self._pipeline is not None:
             return self._pipeline
@@ -93,6 +96,7 @@ class SentenceBoundaryDetector:
         )
         return self._pipeline
 
+    # Deteksi kalimat menggunakan aturan berbasis heuristik
     def _segment_with_rules(self, text):
         sentences = []
         n = len(text)
@@ -181,6 +185,7 @@ class SentenceBoundaryDetector:
             sentences.append(tail)
         return sentences
 
+    # Mencari indeks karakter berikutnya yang bukan spasi, dan apakah ada spasi di antaranya
     def _next_non_space(self, text, start):
         n = len(text)
         idx = start
@@ -198,6 +203,7 @@ class SentenceBoundaryDetector:
         return idx, saw_space
 
     @staticmethod
+    # Mendapatkan token sebelum indeks tertentu, untuk keperluan deteksi singkatan
     def _get_prev_token(text, idx):
         j = idx - 1
         while j >= 0 and text[j].isspace():
@@ -208,6 +214,7 @@ class SentenceBoundaryDetector:
         return text[j + 1 : end + 1]
 
     @staticmethod
+    # Cek apakah titik merupakan bagian dari angka (misalnya 3.14)
     def _is_number_period(text, idx):
         return (
             idx > 0
@@ -217,6 +224,7 @@ class SentenceBoundaryDetector:
         )
 
     @staticmethod
+    # Cek apakah titik merupakan marker list (misalnya "1. ", "a. ", "i. ", "IV. ", dll.)
     def _is_list_marker(text, start, dot_idx):
         if dot_idx < start:
             return False

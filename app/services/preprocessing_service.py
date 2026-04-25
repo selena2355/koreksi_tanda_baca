@@ -11,10 +11,47 @@ class PreprocessingService:
         self.text_normalizer = text_normalizer or TextNormalizer()
         self.sbd_detector = sbd_detector or SentenceBoundaryDetector()
         self.tokenizer = tokenizer or Tokenizer()
-        self.pos_tagger = pos_tagger
+        self.pos_tagger = pos_tagger or POSTagger()
 
     def preprocessing(self, teks):
         return self.text_normalizer.normalize(teks)
+
+    def prepare_rule_text(self, teks):
+        if not teks:
+            return ""
+
+        prepared_lines = []
+        for line in teks.splitlines(keepends=True):
+            prepared_lines.append(self._prepare_table_line_for_rules(line))
+        return "".join(prepared_lines)
+
+    def _prepare_table_line_for_rules(self, line):
+        if not line:
+            return line
+
+        content = line.rstrip("\r\n")
+        line_ending = line[len(content):]
+
+        if not self._looks_like_table_row(content):
+            return line
+
+        # " | " -> "\n\n\n" supaya tiap sel jadi blok terpisah,
+        # tapi panjang string tetap sama untuk menjaga offset error.
+        return content.replace(" | ", "\n\n\n") + line_ending
+
+    @staticmethod
+    # Fungsi untuk mendeteksi apakah sebuah baris teks terlihat seperti baris tabel, dengan heuristik sederhana berdasarkan adanya pemisah " | ",
+    # minimal dua sel yang tidak kosong, dan tidak mengandung URL, untuk menghindari kesalahan deteksi pada teks yang sebenarnya bukan tabel.
+    def _looks_like_table_row(line):
+        if not line or " | " not in line:
+            return False
+
+        if re.search(r"https?://|www\.", line):
+            return False
+
+        cells = [part.strip() for part in line.split(" | ")]
+        non_empty_cells = [cell for cell in cells if cell]
+        return len(non_empty_cells) >= 2
 
     def segment_sentences(self, teks):
         return self._segment_sentences_by_paragraph(teks)
@@ -34,7 +71,6 @@ class PreprocessingService:
         if not teks:
             return []
 
-        # DOCX output is paragraph-friendly; avoid cross-paragraph merging.
         if "\f" not in teks:
             paragraphs = re.split(r"\n\s*\n", teks)
             if len(paragraphs) > 1:

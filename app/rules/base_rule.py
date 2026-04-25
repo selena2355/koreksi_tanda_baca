@@ -18,7 +18,6 @@ class BaseRule:
         if not teks:
             return []
 
-        # Menyimpan hasil deteksi dalam satu list untuk memudahkan pengurutan berdasarkan posisi.
         hasil = []
         hasil.extend(self._cek_spasi_sebelum_tanda_baca(teks))
         hasil.extend(self._cek_spasi_setelah_tanda_baca(teks))
@@ -112,11 +111,16 @@ class BaseRule:
                 return True
 
         if punct == ":":  # skala / perbandingan / waktu
-            # Contoh: "Rasio 1:2", "Pukul 12:30", "Skala 1:1000"
             if prev_char.isdigit() and next_char.isdigit():
                 return True
 
         return False
+
+    @staticmethod
+    def _get_tokens(konteks):
+        if not konteks:
+            return []
+        return konteks.get("tokens", [])
 
     @staticmethod
     def _extract_token(teks, idx):
@@ -148,10 +152,18 @@ class BaseRule:
             return False
         if not re.fullmatch(r"[A-Za-z.,]+", token):
             return False
+
         dot_count = token.count(".")
+        # Gelar dengan 2+ titik: Dr.Ir., S.I.Kom., Ph.D., dll.
         if dot_count >= 2:
             return True
+        # Gelar dengan 1 titik + koma: dalam konteks daftar gelar "Dr., M.Sc.,"
         if dot_count >= 1 and "," in token:
+            return True
+        # Perubahan: gelar 1 titik dengan pola huruf kapital + titik + huruf
+        # Menangkap: S.Pd, S.H, S.E, S.T, M.Si, M.Pd, M.T, A.Md, dll.
+        # Pola: 1-2 huruf kapital, titik, 1-3 huruf (kapital atau kecil)
+        if re.fullmatch(r"[A-Z]{1,2}\.[A-Za-z]{1,3}", token):
             return True
         return False
 
@@ -166,6 +178,8 @@ class BaseRule:
         end,
         rule,
         prioritas,
+        display_start=None,
+        display_end=None,
     ):
         kesalahan = Kesalahan(
             jenis=jenis,
@@ -178,4 +192,6 @@ class BaseRule:
         kesalahan.kode = kode
         kesalahan.rule = rule
         kesalahan.prioritas = prioritas
+        kesalahan.display_start = start if display_start is None else display_start
+        kesalahan.display_end = end if display_end is None else display_end
         return kesalahan

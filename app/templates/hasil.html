@@ -9,9 +9,10 @@
 {% endblock %}
 
 {% block scripts %}
-    {% if before_unload_url %}
     <script>
         let skipBeforeUnload = false;
+        const beforeUnloadUrl = "{{ before_unload_url | default('') }}";
+
         const downloadLink = document.getElementById("download-link");
         if (downloadLink) {
             downloadLink.addEventListener("click", () => {
@@ -22,22 +23,63 @@
             });
         }
 
-        window.addEventListener("beforeunload", () => {
-            if (skipBeforeUnload) {
+        const focusLinkedHighlight = (sourceElement) => {
+            const targetId = sourceElement.dataset.linkTarget;
+            if (!targetId) {
                 return;
             }
 
-            fetch("{{ before_unload_url }}", {
-                method: "POST",
-                keepalive: true,
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: "{}"
-            }).catch(() => {});
+            const targetElement = document.getElementById(targetId);
+            if (!targetElement) {
+                return;
+            }
+
+            targetElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest"
+            });
+
+            sourceElement.classList.add("is-linked-active");
+            targetElement.classList.add("is-linked-active");
+
+            window.setTimeout(() => {
+                sourceElement.classList.remove("is-linked-active");
+                targetElement.classList.remove("is-linked-active");
+            }, 1400);
+        };
+
+        document.querySelectorAll(".linked-highlight").forEach((element) => {
+            element.addEventListener("click", () => {
+                focusLinkedHighlight(element);
+            });
+
+            element.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+                event.preventDefault();
+                focusLinkedHighlight(element);
+            });
         });
+
+        if (beforeUnloadUrl) {
+            window.addEventListener("beforeunload", () => {
+                if (skipBeforeUnload) {
+                    return;
+                }
+
+                fetch(beforeUnloadUrl, {
+                    method: "POST",
+                    keepalive: true,
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: "{}"
+                }).catch(() => {});
+            });
+        }
     </script>
-    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -68,7 +110,9 @@
         <div class="result-block">
             <div class="result-title">Hasil Koreksi</div>
             <div class="result-card">
-                {% if correction_text %}
+                {% if correction_html %}
+                    <pre class="result-content">{{ correction_html | safe }}</pre>
+                {% elif correction_text %}
                     <pre class="result-content">{{ correction_text }}</pre>
                 {% endif %}
             </div>
