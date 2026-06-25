@@ -4,6 +4,12 @@ from ..controllers.dokumen_controller import (
     simpan_hasil_ke_riwayat,
     upload_dokumen,
     hasil_koreksi,
+    hasil_job,
+    batalkan_job,
+    jobs_status_json,
+    job_status_json,
+    job_status_page,
+    unduh_dokumen_asli,
     uploaded_file,
     unduh_hasil_koreksi,
     clear_preview,
@@ -14,6 +20,13 @@ main_bp = Blueprint("main", __name__)
 
 main_bp.add_url_rule("/", view_func=upload_dokumen, methods=["GET", "POST"])
 main_bp.add_url_rule("/hasil", view_func=hasil_koreksi, methods=["GET", "POST"])
+main_bp.add_url_rule("/jobs", view_func=job_status_page, methods=["GET"])
+main_bp.add_url_rule("/jobs/status", view_func=jobs_status_json, methods=["GET"])
+main_bp.add_url_rule("/jobs/<int:job_id>", view_func=job_status_page, methods=["GET"])
+main_bp.add_url_rule("/jobs/<int:job_id>/status", view_func=job_status_json, methods=["GET"])
+main_bp.add_url_rule("/jobs/<int:job_id>/cancel", view_func=batalkan_job, methods=["POST"])
+main_bp.add_url_rule("/jobs/<int:job_id>/hasil", view_func=hasil_job, methods=["GET"])
+main_bp.add_url_rule("/jobs/<int:job_id>/dokumen-asli", view_func=unduh_dokumen_asli, methods=["GET"])
 main_bp.add_url_rule("/unduh-hasil", view_func=unduh_hasil_koreksi, methods=["GET"])
 main_bp.add_url_rule("/simpan-hasil-ke-riwayat", view_func=simpan_hasil_ke_riwayat, methods=["POST"])
 main_bp.add_url_rule("/uploads/<path:filename>", view_func=uploaded_file, methods=["GET"])

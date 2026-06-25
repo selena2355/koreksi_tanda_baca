@@ -22,6 +22,19 @@ class TextNormalizer:
         "\ufeff",  # Byte order mark (BOM)
         "\u00ad",  # Soft hyphen
     ]
+    
+    _SMART_QUOTE_MAP = {
+        "\u201C": '"',   # " left double quotation mark
+        "\u201D": '"',   # " right double quotation mark
+        "\u2018": "'",   # ' left single quotation mark
+        "\u2019": "'",   # ' right single quotation mark
+        "\u201A": "'",   # ‚ single low-9 quotation mark
+        "\u201E": '"',   # „ double low-9 quotation mark
+        "\u2039": "'",   # ‹ single left-pointing angle quotation mark
+        "\u203A": "'",   # › single right-pointing angle quotation mark
+        "\u00AB": '"',   # « left-pointing double angle quotation mark
+        "\u00BB": '"',   # » right-pointing double angle quotation mark
+    }
 
     def normalize_docx(self, text: str) -> str:
         """
@@ -32,6 +45,9 @@ class TextNormalizer:
 
         for char in self.ZERO_WIDTH_CHARS:
             text = text.replace(char, "")
+            
+        for smart, straight in self._SMART_QUOTE_MAP.items():
+            text = text.replace(smart, straight)
 
         # Normalisasi Unicode ke bentuk komposisi (NFC)
         text = unicodedata.normalize("NFKC", text)
@@ -128,13 +144,6 @@ def detect_sentences(text: str) -> List[str]:
         if part:
             sentences.append(part)
     return sentences
-
-
-def tokenize(text: str) -> List[str]:
-    """
-    Simple tokenization: words + punctuation.
-    """
-    return re.findall(r"\b\w+\b|[^\w\s]", text)
 
 
 _DEFAULT_NORMALIZER = TextNormalizer()

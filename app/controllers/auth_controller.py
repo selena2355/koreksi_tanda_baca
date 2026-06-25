@@ -1,4 +1,5 @@
 from flask import render_template, request, redirect, url_for, flash, session
+import re
 from ..extensions import db
 from ..models import Pengguna
 from ..services.riwayat_service import RiwayatService
@@ -6,34 +7,113 @@ from ..utils.file_utils import FileUtils
 
 
 class AuthController:
+    # Konstanta validasi
+    MIN_PASSWORD_LENGTH = 8
+    MIN_USERNAME_LENGTH = 3
+    MAX_USERNAME_LENGTH = 20
+    
     # Inisialisasi controller dengan service dan utilitas yang diperlukan
     def __init__(self, riwayat_service=None, file_utils=None):
         self.riwayat_service = riwayat_service or RiwayatService()
         self.file_utils = file_utils or FileUtils()
 
     def login_page(self):
-        return render_template("login.html")
+        return render_template("login.html", errors={}, form_data={})
 
     def register_page(self):
-        return render_template("register.html")
+        return render_template("register.html", errors={}, form_data={})
+
+    def _validate_username(self, username):
+        """Validasi username dan return error jika ada"""
+        errors = {}
+        
+        if not username:
+            errors["username"] = "Username wajib diisi."
+            return errors
+        
+        username = username.strip()
+        
+        if len(username) < self.MIN_USERNAME_LENGTH:
+            errors["username"] = f"Username minimal {self.MIN_USERNAME_LENGTH} karakter."
+            return errors
+        
+        if len(username) > self.MAX_USERNAME_LENGTH:
+            errors["username"] = f"Username maksimal {self.MAX_USERNAME_LENGTH} karakter."
+            return errors
+        
+        if " " in username:
+            errors["username"] = "Username tidak boleh mengandung spasi."
+            return errors
+        
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", username):
+            errors["username"] = "Username hanya boleh berisi huruf, angka, underscore, titik, dan dash."
+            return errors
+        
+        return errors
+
+    def _validate_password(self, password):
+        """Validasi password dan return error jika ada"""
+        errors = {}
+        
+        if not password:
+            errors["password"] = "Password wajib diisi."
+            return errors
+        
+        if len(password) < self.MIN_PASSWORD_LENGTH:
+            errors["password"] = f"Password minimal {self.MIN_PASSWORD_LENGTH} karakter."
+            return errors
+        
+        return errors
+
+    def _validate_email(self, email):
+        """Validasi email dan return error jika ada"""
+        errors = {}
+        
+        if not email:
+            errors["email"] = "Email wajib diisi."
+            return errors
+        
+        email = email.strip()
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        
+        if not re.match(email_pattern, email):
+            errors["email"] = "Format email tidak valid."
+            return errors
+        
+        return errors
 
     def register_post(self):
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
 
-        if not username or not email or not password:
-            flash("Semua field wajib diisi.", "error")
-            return redirect(url_for("auth.register_page"))
+        # Validasi setiap field
+        errors = {}
+        errors.update(self._validate_username(username))
+        errors.update(self._validate_email(email))
+        errors.update(self._validate_password(password))
 
+        if errors:
+            # Pastikan error ditampilkan seperti "field error" di bawah masing-masing field
+            return render_template(
+                "register.html",
+                errors=errors,
+                form_data={"username": username, "email": email},
+            )
+
+        # Cek apakah username atau email sudah terdaftar
         existing_user = (
             Pengguna.query.filter(
                 (Pengguna.username == username) | (Pengguna.email == email)
             ).first()
         )
         if existing_user:
-            flash("Username atau email sudah terdaftar.", "error")
-            return redirect(url_for("auth.register_page"))
+            if existing_user.username == username:
+                errors["username"] = "Username sudah terdaftar."
+            if existing_user.email == email:
+                errors["email"] = "Email sudah terdaftar."
+            return render_template("register.html", errors=errors, 
+                                 form_data={"username": username, "email": email})
 
         user = Pengguna(username=username, email=email)
         user.set_password(password)
@@ -50,17 +130,34 @@ class AuthController:
         identifier = request.form.get("identifier", "").strip()
         password = request.form.get("password", "")
 
-        if not identifier or not password:
-            flash("Username/email dan password wajib diisi.", "error")
-            return redirect(url_for("auth.login_page"))
+        errors = {}
+        
+        if not identifier:
+            errors["identifier"] = "Email atau username wajib diisi."
+        
+        if not password:
+            errors["password"] = "Password wajib diisi."
+
+        if errors:
+            return render_template(
+                "login.html",
+                errors=errors,
+                form_data={"identifier": identifier},
+            )
 
         user = Pengguna.query.filter(
             (Pengguna.username == identifier) | (Pengguna.email == identifier)
         ).first()
 
-        if not user or not user.check_password(password):
-            flash("Login gagal. Cek username/email dan password.", "error")
-            return redirect(url_for("auth.login_page"))
+        if not user:
+            errors["identifier"] = "Username/email tidak ditemukan."
+            return render_template("login.html", errors=errors, 
+                                 form_data={"identifier": identifier})
+
+        if not user.check_password(password):
+            errors["password"] = "Password salah."
+            return render_template("login.html", errors=errors, 
+                                 form_data={"identifier": identifier})
 
         session["user_id"] = user.id
         session["username"] = user.username

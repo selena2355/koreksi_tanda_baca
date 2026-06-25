@@ -6,8 +6,6 @@ from ..rules.base_rule import BaseRule
 from ..rules.koma_rule import KomaRule
 from ..rules.tanda_hubung_rule import TandaHubungRule
 from ..rules.tanda_petik_rule import TandaPetikRule
-from ..rules.tanda_seru_rule import TandaSeruRule
-from ..rules.tanda_tanya_rule import TandaTanyaRule
 from ..rules.titik_dua_rule import TitikDuaRule
 from ..rules.titik_rule import TitikRule
 from ..services.preprocessing_service import PreprocessingService
@@ -15,6 +13,8 @@ from ..services.koreksi_service import KoreksiService
 
 
 class PemeriksaanDokumenService:
+    HIGHLIGHT_TYPE_PREFIXES = ("CmD", "QtD", "QsD", "CnD", "BD", "DD", "HD")
+
     # Fungsi untuk menginisialisasi layanan pemeriksaan dokumen dengan opsi untuk menyuntikkan layanan preprocessing,
     # koreksi, dan aturan deteksi yang dapat disesuaikan, atau menggunakan default jika tidak diberikan.
     def __init__(self, preprocessing_service=None, koreksi_service=None, rules=None):
@@ -37,7 +37,7 @@ class PemeriksaanDokumenService:
     def validasi_dokumen(self, dokumen: Dokumen) -> bool:
         return bool(dokumen and dokumen.teks_asli)
 
-    def ekstraksi_teks(self, teks: str) -> str:
+    def ekstraksi_teks(self, teks: str) -> str:       
         return teks
 
     def preprocessing(self, teks: str) -> str:
@@ -79,8 +79,6 @@ class PemeriksaanDokumenService:
             BaseRule(),
             TitikRule(),
             KomaRule(),
-            TandaTanyaRule(),
-            TandaSeruRule(),
             TandaPetikRule(),
             TitikDuaRule(),
             TandaHubungRule(),
@@ -157,6 +155,7 @@ class PemeriksaanDokumenService:
     # Fungsi untuk menentukan peringkat prioritas berdasarkan atribut 'prioritas' pada objek kesalahan, dengan default peringkat rendah jika tidak ada atau tidak dikenali
     def _priority_rank(item):
         ranks = {
+            "CRITICAL": -1,
             "HIGH": 0,
             "MEDIUM": 1,
             "LOW": 2,
@@ -226,13 +225,15 @@ class PemeriksaanDokumenService:
             tooltip = self._format_tooltip(item)
             snippet = teks[display_start:display_end]
             pair_id = self._pair_id(idx)
+            type_key = self._type_key_from_kode(getattr(item, "kode", ""))
             output_html.append(
                 (
-                    "<mark id=\"detection-{}\" class=\"error-highlight linked-highlight\" "
+                    "<mark id=\"detection-{}\" class=\"error-highlight hl-{} linked-highlight\" "
                     "data-link-target=\"correction-{}\" tabindex=\"0\" role=\"button\" "
                     "title=\"{}\">{}</mark>"
                 ).format(
                     pair_id,
+                    type_key,
                     pair_id,
                     html_lib.escape(tooltip),
                     html_lib.escape(snippet),
@@ -266,12 +267,14 @@ class PemeriksaanDokumenService:
             if replacement is None:
                 replacement = ""
             pair_id = self._pair_id(idx)
+            type_key = self._type_key_from_kode(getattr(item, "kode", ""))
             output_html.append(
                 (
-                    "<mark id=\"correction-{}\" class=\"correction-highlight linked-highlight\" "
+                    "<mark id=\"correction-{}\" class=\"correction-highlight hl-{} linked-highlight\" "
                     "data-link-target=\"detection-{}\" tabindex=\"0\" role=\"button\">{}</mark>"
                 ).format(
                     pair_id,
+                    type_key,
                     pair_id,
                     html_lib.escape(replacement),
                 )
@@ -294,6 +297,14 @@ class PemeriksaanDokumenService:
     @staticmethod
     def _pair_id(index):
         return f"issue-{index}"
+
+    @classmethod
+    def _type_key_from_kode(cls, kode):
+        kode = str(kode or "")
+        for prefix in cls.HIGHLIGHT_TYPE_PREFIXES:
+            if kode.startswith(prefix):
+                return prefix
+        return "unknown"
 
     @staticmethod
     # Fungsi untuk memformat tooltip yang akan ditampilkan saat pengguna mengarahkan kursor ke bagian teks yang disorot, dengan menyertakan kode kesalahan, deskripsi masalah, dan perbaikan yang disarankan jika tersedia

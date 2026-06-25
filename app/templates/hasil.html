@@ -5,7 +5,8 @@
 {% block nav_class %}single{% endblock %}
 
 {% block nav_items %}
-<a class="nav-item active" href="{{ url_for('main.hasil_koreksi') }}">Hasil Koreksi</a>
+    <a class="nav-item active" href="{{ result_url | default(url_for('main.hasil_koreksi')) }}">Hasil Koreksi</a>
+    <a class="nav-item" href="{{ url_for('main.tentang_page', from_page='hasil', return_url=(result_url | default(url_for('main.hasil_koreksi')))) }}">Tentang Aplikasi</a>
 {% endblock %}
 
 {% block scripts %}
@@ -91,6 +92,9 @@
         {% if auto_save_history %}
         <span class="result-saving-note">Hasil akan otomatis disimpan ke riwayat saat Anda keluar dari halaman ini.</span>
         {% endif %}
+        {% if original_download_url %}
+        <a class="download-button result-original-button" href="{{ original_download_url }}">Download Dokumen Asli</a>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -104,6 +108,39 @@
                     <pre class="result-content">{{ extracted_text }}</pre>
                 {% endif %}
             </div>
+            
+            {% if error_summary and error_summary.total > 0 %}
+            <div class="error-summary">
+                <div class="error-summary-title">Ringkasan Kesalahan</div>
+                <div class="error-summary-total">{{ error_summary.total }} kesalahan tanda baca terdeteksi</div>
+                {% if error_summary.get("items") %}
+                <ul class="error-summary-list">
+                    {% for item in error_summary.get("items") %}
+                    <li>
+                        <span class="error-summary-name">
+                            <span class="error-summary-swatch hl-{{ item.type_key | default('unknown') }}" aria-hidden="true"></span>
+                            <span>{{ item.name }}</span>
+                        </span>
+                        <strong>{{ item.count }}</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% elif error_summary.get("by_type") %}
+                <ul class="error-summary-list">
+                    {% for type_name, count in error_summary.get("by_type").items() | sort %}
+                    <li>
+                        <span class="error-summary-name">
+                            <span class="error-summary-swatch hl-unknown" aria-hidden="true"></span>
+                            <span>{{ type_name }}</span>
+                        </span>
+                        <strong>{{ count }}</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endif %}
+            
             <a class="back-button" href="{{ back_url }}">{{ back_label }}</a>
         </div>
 

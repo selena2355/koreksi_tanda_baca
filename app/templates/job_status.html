@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Proses Pemeriksaan{% endblock %}
+{% block subtitle %}Proses Dokumen{% endblock %}
+{% block nav_class %}single{% endblock %}
+
+{% block nav_items %}
+<a class="nav-item active" href="{{ url_for('main.upload_dokumen') }}">Proses Dokumen</a>
+{% endblock %}
+
+{% block content %}
+<section class="workspace job-workspace">
+    <div class="job-page-header">
+        <div>
+            <h2>Proses Dokumen</h2>
+            <p>Daftar pemeriksaan dokumen yang masih tersimpan di sesi aplikasi.</p>
+        </div>
+        <a class="back-button" href="{{ upload_url }}">Kembali</a>
+    </div>
+
+    <div id="job-list" class="job-list" data-status-url="{{ status_url }}">
+        {% if jobs %}
+            {% for job in jobs %}
+            <article class="job-status-card" data-job-id="{{ job.id }}">
+                <div class="job-status-meta">
+                    <span class="result-doc-label">Dokumen</span>
+                    <strong class="job-name">{{ job.nama_dokumen }}</strong>
+                    <span class="job-created">{{ job.created_at }}</span>
+                </div>
+
+                <div class="job-status-body">
+                    <h2 class="job-title"></h2>
+                    <p class="job-message"></p>
+
+                    <div class="job-progress" aria-label="Progress pemeriksaan">
+                        <div class="job-progress-bar"></div>
+                    </div>
+                    <div class="job-progress-text">{{ job.progress }}%</div>
+                </div>
+
+                <div class="job-status-actions">
+                    <a class="back-button" href="{{ upload_url }}">Kembali</a>
+                    <button class="back-button job-cancel-button{% if not job.can_cancel %} is-hidden{% endif %}" type="button" data-cancel-url="{{ job.cancel_url }}" {% if not job.can_cancel %}disabled{% endif %}>Batalkan</button>
+                    <a class="download-button job-result-link{% if not job.can_show_result %} is-hidden{% endif %}" href="{{ job.result_url }}">Tampilkan Hasil</a>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="job-empty-state">Belum ada proses dokumen.</div>
+        {% endif %}
+    </div>
+    <script id="initial-jobs-data" type="application/json">{{ jobs | tojson }}</script>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const jobList = document.getElementById("job-list");
+    const initialJobsElement = document.getElementById("initial-jobs-data");
+
+    const statusText = {
+        pending: {
+            title: "Menunggu worker",
+            message: "Job sudah dibuat, tetapi belum diambil oleh proses background."
+        },
+        processing: {
+            title: "Dokumen sedang diproses",
+            message: "Pemeriksaan berjalan di background."
+        },
+        done: {
+            title: "Pemeriksaan selesai",
+            message: "Hasil koreksi sudah siap dibuka."
+        },
+        failed: {
+            title: "Pemeriksaan gagal",
+            message: "Dokumen gagal diproses."
+        },
+        cancelled: {
+            title: "Pemeriksaan dibatalkan",
+            message: "Proses pemeriksaan sudah dihentikan."
+        }
+    };
+
+    const setProgress = (card, value) => {
+        const progress = Math.max(0, Math.min(100, Number(value) || 0));
+        const bar = card.querySelector(".job-progress-bar");
+        const text = card.querySelector(".job-progress-text");
+        if (bar) {
+            bar.style.width = `${progress}%`;
+        }
+        if (text) {
+            text.textContent = `${progress}%`;
+        }
+    };
+
+    const applyJobState = (card, job) => {
+        if (!card) {
+            return;
+        }
+
+        const copy = statusText[job.status] || statusText.pending;
+        const title = card.querySelector(".job-title");
+        const message = card.querySelector(".job-message");
+        const cancelButton = card.querySelector(".job-cancel-button");
+        const resultLink = card.querySelector(".job-result-link");
+
+        if (title) {
+            title.textContent = copy.title;
+        }
+        if (message) {
+            message.textContent = job.error_message || copy.message;
+        }
+
+        setProgress(card, job.progress);
+        const progressBar = card.querySelector(".job-progress-bar");
+        if (progressBar) {
+            progressBar.classList.toggle("is-animated", job.status === "processing");
+        }
+
+        if (cancelButton) {
+            cancelButton.disabled = !job.can_cancel;
+            cancelButton.dataset.cancelUrl = job.cancel_url;
+            cancelButton.classList.toggle("is-hidden", !job.can_cancel);
+        }
+
+        if (resultLink) {
+            resultLink.href = job.result_url;
+            resultLink.classList.toggle("is-hidden", !job.can_show_result);
+        }
+    };
+
+    const refreshJobs = async () => {
+        if (!jobList) {
+            return;
+        }
+
+        try {
+            const response = await fetch(jobList.dataset.statusUrl, {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+            const data = await response.json();
+
+            data.jobs.forEach((job) => {
+                const card = jobList.querySelector(`[data-job-id="${job.id}"]`);
+                if (card) {
+                    applyJobState(card, job);
+                }
+            });
+        } catch (error) {
+            // Keep the last visible state if polling briefly fails.
+        } finally {
+            window.setTimeout(refreshJobs, 2500);
+        }
+    };
+
+    document.querySelectorAll(".job-status-card").forEach((card) => {
+        const cancelButton = card.querySelector(".job-cancel-button");
+        if (!cancelButton) {
+            return;
+        }
+
+        cancelButton.addEventListener("click", async () => {
+            cancelButton.disabled = true;
+            try {
+                await fetch(cancelButton.dataset.cancelUrl, {
+                    method: "POST",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                });
+            } finally {
+                refreshJobs();
+            }
+        });
+    });
+
+    const initialJobs = initialJobsElement ? JSON.parse(initialJobsElement.textContent || "[]") : [];
+    initialJobs.forEach((job) => {
+        applyJobState(
+            document.querySelector(`[data-job-id="${job.id}"]`),
+            job
+        );
+    });
+
+    window.setTimeout(refreshJobs, 1000);
+</script>
+{% endblock %}

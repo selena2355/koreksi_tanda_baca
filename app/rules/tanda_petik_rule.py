@@ -6,9 +6,27 @@ from .base_rule import BaseRule
 class TandaPetikRule(BaseRule):
     id = "tanda_petik"
 
-    _RE_VERBA_KUTIPAN = re.compile(r"\b(berkata|mengatakan|bertanya)\b", re.IGNORECASE)
+    _RE_VERBA_KUTIPAN = re.compile(
+        r"\b("
+        # asli
+        r"berkata|mengatakan|bertanya"
+        r"|"
+        # tambahan
+        r"menyatakan|menjelaskan|mengungkapkan|menegaskan|"
+        r"menuturkan|menambahkan|memaparkan|mengutarakan|"
+        r"menyampaikan|menanggapi|menjawab|membenarkan"
+        r")\b",
+        re.IGNORECASE,
+    )
+
     _RE_SPASI_DALAM_PETIK = re.compile(r'"([^"\n]*)"')
     _QUOTE_CHAR = '"'
+
+    # Kata-kata yang sering diikuti titik tapi bukan akhir kalimat
+    _SINGKATAN = re.compile(
+        r"\b(H|Dr|dr|Prof|Ir|Drs|Mr|Mrs|Ms|St|dll|dsb|dst|hlm|hal|no|vol|yth|a\.n|u\.p)\.$",
+        re.IGNORECASE,
+    )
 
     def cek(self, teks, konteks=None):
         if not teks:
@@ -16,9 +34,12 @@ class TandaPetikRule(BaseRule):
 
         hasil = []
         hasil.extend(self._cek_kutipan_langsung_tanpa_petik(teks))
-        hasil.extend(self._cek_tanda_petik_tidak_berpasangan(teks))
         hasil.extend(self._cek_spasi_di_dalam_tanda_petik(teks))
         return hasil
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # QtD1 — Kutipan langsung tanpa tanda petik
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _cek_kutipan_langsung_tanpa_petik(self, teks):
         hasil = []
@@ -27,71 +48,47 @@ class TandaPetikRule(BaseRule):
             if not quote_span:
                 continue
 
-            start, end = quote_span
-            quoted_text = teks[start:end]
-            if not quoted_text or quoted_text.startswith(self._QUOTE_CHAR):
+            # _find_direct_quote_span mengembalikan 4-tuple:
+            # (replace_start, replace_end, text_start, had_separator)
+            replace_start, replace_end, text_start, had_separator = quote_span
+
+            quoted_text = teks[text_start:replace_end]
+            if not quoted_text:
                 continue
+
+            # Cek apakah kutipan sudah diapit tanda petik
+            char_before = teks[text_start - 1] if text_start > 0 else ""
+            if char_before == self._QUOTE_CHAR:
+                continue
+
+            if self._QUOTE_CHAR in quoted_text:
+                continue
+
+            # replace_start mencakup spasi + pemisah asli (jika ada),
+            # sehingga pengganti selalu menyertakan ", " yang bersih.
+            prefix = ", "
 
             hasil.append(
                 self._buat_kesalahan(
                     kode="QtD1",
                     jenis="tanda_petik_kutipan_langsung",
                     deskripsi="Petikan langsung tidak diapit tanda petik.",
-                    perbaikan='Bungkus kutipan langsung dengan tanda petik.',
-                    pengganti=f'"{quoted_text}"',
-                    start=start,
-                    end=end,
+                    perbaikan=(
+                        "Bungkus kutipan langsung dengan tanda petik"
+                        + ("." if had_separator else ", lalu tambahkan koma setelah verba kutipan.")
+                    ),
+                    pengganti=f'{prefix}"{quoted_text}"',
+                    start=replace_start,
+                    end=replace_end,
                     rule="QtR1",
                     prioritas="MEDIUM",
                 )
             )
         return hasil
 
-    def _cek_tanda_petik_tidak_berpasangan(self, teks):
-        hasil = []
-        quote_positions = [idx for idx, char in enumerate(teks) if char == self._QUOTE_CHAR]
-        if len(quote_positions) % 2 == 0:
-            return hasil
-
-        first_quote = quote_positions[0] if quote_positions else -1
-        last_quote = quote_positions[-1] if quote_positions else -1
-        sentence_end = self._find_sentence_end(teks, last_quote + 1)
-
-        if first_quote == 0 or (first_quote > 0 and teks[first_quote - 1] in " \n\t:;,"):
-            hasil.append(
-                self._buat_kesalahan(
-                    kode="QtD2",
-                    jenis="tanda_petik_tidak_berpasangan",
-                    deskripsi="Tanda petik tidak berpasangan.",
-                    perbaikan='Tambah tanda petik penutup yang hilang.',
-                    pengganti=self._QUOTE_CHAR,
-                    start=sentence_end,
-                    end=sentence_end,
-                    rule="QtR2",
-                    prioritas="MEDIUM",
-                    display_start=max(0, min(len(teks), sentence_end - 1)),
-                    display_end=min(len(teks), sentence_end),
-                )
-            )
-            return hasil
-
-        opening_start = self._find_opening_quote_insert_position(teks, first_quote)
-        hasil.append(
-            self._buat_kesalahan(
-                kode="QtD2",
-                jenis="tanda_petik_tidak_berpasangan",
-                deskripsi="Tanda petik tidak berpasangan.",
-                perbaikan='Tambah tanda petik pembuka yang hilang.',
-                pengganti=self._QUOTE_CHAR,
-                start=opening_start,
-                end=opening_start,
-                rule="QtR2",
-                prioritas="MEDIUM",
-                display_start=opening_start,
-                display_end=min(len(teks), opening_start + 1),
-            )
-        )
-        return hasil
+    # ─────────────────────────────────────────────────────────────────────────
+    # QtD2 — Spasi di dalam tanda petik
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _cek_spasi_di_dalam_tanda_petik(self, teks):
         hasil = []
@@ -102,69 +99,117 @@ class TandaPetikRule(BaseRule):
 
             hasil.append(
                 self._buat_kesalahan(
-                    kode="QtD3",
+                    kode="QtD2",
                     jenis="spasi_di_dalam_tanda_petik",
                     deskripsi="Terdapat spasi di dalam tanda petik.",
-                    perbaikan='Hapus spasi setelah pembuka atau sebelum penutup tanda petik.',
+                    perbaikan="Hapus spasi setelah pembuka atau sebelum penutup tanda petik.",
                     pengganti=f'"{inner.strip()}"',
                     start=match.start(),
                     end=match.end(),
-                    rule="QtR3",
+                    rule="QtR2",
                     prioritas="MEDIUM",
                 )
             )
         return hasil
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helper — QtD1
+    # ─────────────────────────────────────────────────────────────────────────
+
     def _find_direct_quote_span(self, teks, search_start):
-        cursor = search_start
+        """
+        Cari span kutipan langsung setelah verba kutipan.
+
+        Mengembalikan (replace_start, replace_end, text_start, had_separator) atau None.
+
+        - replace_start : posisi tepat setelah verba (search_start); mencakup
+                          spasi dan pemisah asli sehingga semuanya tergantikan bersih.
+        - replace_end   : posisi akhir span kutipan (inklusif tanda baca penutup)
+        - text_start    : posisi huruf pertama kutipan murni
+        - had_separator : True jika ada koma/titik dua pemisah di teks asli
+        """
+        cursor = search_start  # tepat setelah verba
+
+        # Lewati spasi setelah verba
         while cursor < len(teks) and teks[cursor].isspace():
             cursor += 1
+
+        # Deteksi pemisah (koma atau titik dua)
+        had_separator = False
         if cursor < len(teks) and teks[cursor] in ",:":
-            cursor += 1
+            had_separator = True
+            cursor += 1                               # lewati pemisah
             while cursor < len(teks) and teks[cursor].isspace():
-                cursor += 1
+                cursor += 1                           # lewati spasi setelah pemisah
+
         if cursor >= len(teks):
             return None
         if teks[cursor] == self._QUOTE_CHAR:
             return None
+
+        # Karakter pertama harus huruf kapital agar dianggap kutipan langsung
         if not teks[cursor].isupper():
             return None
+
+        # replace_start dimulai dari search_start (tepat setelah verba),
+        # sehingga spasi + pemisah asli ikut tergantikan bersama pengganti.
+        replace_start = search_start
+        text_start = cursor
 
         sentence_end = self._find_sentence_end(teks, cursor)
         if sentence_end <= cursor:
             return None
+
         if sentence_end < len(teks) and teks[sentence_end] in ".!?":
-            return cursor, sentence_end + 1
-        return cursor, sentence_end
+            replace_end = sentence_end + 1
+        else:
+            replace_end = sentence_end
 
-    def _find_opening_quote_insert_position(self, teks, quote_index):
-        sentence_start = self._find_sentence_start(teks, quote_index)
-        match = self._RE_VERBA_KUTIPAN.search(teks, sentence_start, quote_index)
-        if match:
-            cursor = match.end()
-            while cursor < quote_index and teks[cursor].isspace():
-                cursor += 1
-            return cursor
+        return replace_start, replace_end, text_start, had_separator
 
-        cursor = sentence_start
-        while cursor < quote_index and teks[cursor].isspace():
-            cursor += 1
-        return cursor
+    def _find_sentence_end(self, teks, idx):
+        """
+        Cari akhir kalimat mulai dari idx.
 
-    @staticmethod
-    def _find_sentence_start(teks, idx):
-        cursor = idx - 1
-        while cursor >= 0:
-            if teks[cursor] in ".!?\n":
-                return cursor + 1
-            cursor -= 1
-        return 0
+        Titik (.) dianggap akhir kalimat hanya jika:
+        - diikuti spasi + huruf kapital, ATAU
+        - berada di ujung string / diikuti newline,
+        DAN token sebelum titik bukan singkatan yang dikenal.
 
-    @staticmethod
-    def _find_sentence_end(teks, idx):
+        Tanda ! dan ? selalu dianggap akhir kalimat.
+        Newline juga dianggap batas akhir.
+        """
         cursor = idx
         while cursor < len(teks):
-            if teks[cursor] in ".!?\n":
+            ch = teks[cursor]
+
+            if ch in "!?\n":
                 return cursor
+
+            if ch == ".":
+                # Cek apakah ini singkatan
+                token_before = teks[idx:cursor + 1]  # substring dari awal s.d. titik ini
+                if self._SINGKATAN.search(token_before):
+                    cursor += 1
+                    continue
+
+                # Titik akhir kalimat: diikuti spasi+kapital, atau ujung/newline
+                next_pos = cursor + 1
+                if next_pos >= len(teks):
+                    return cursor          # ujung string
+                if teks[next_pos] == "\n":
+                    return cursor
+                if teks[next_pos] == " ":
+                    # Lewati spasi, lalu cek kapital
+                    look = next_pos + 1
+                    while look < len(teks) and teks[look] == " ":
+                        look += 1
+                    if look < len(teks) and teks[look].isupper():
+                        return cursor     # akhir kalimat
+                # Titik tapi bukan akhir kalimat (mis. singkatan tak dikenal) — lanjut
+                cursor += 1
+                continue
+
             cursor += 1
+
         return len(teks)

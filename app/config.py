@@ -38,8 +38,8 @@ class Config:
     # ALLOWED_EXTENSIONS = {"pdf"}  # legacy PDF (disabled)
     ALLOWED_EXTENSIONS = {"docx"}
     
-    # Ukuran file maksimal (50 MB)
-    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 50 * 1024 * 1024))
+    # Ukuran file maksimal (5 MB)
+    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 5 * 1024 * 1024))
     
     # Flask settings
     JSON_SORT_KEYS = False

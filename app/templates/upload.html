@@ -17,9 +17,17 @@
             <div class="upload-row">
                 <form id="upload-form" method="POST" enctype="multipart/form-data">
                     <label class="upload-button">
+                        <span class="button-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                        </span>
                         <span>Unggah Dokumen</span>
                         <input id="doc-input" type="file" name="file" accept=".docx" {% if not preview_url %}required{% endif %}>
                     </label>
+                    <p class="upload-note">
+                        Dokumen yang dapat diunggah hanya berformat DOCX dengan ukuran maksimum 5MB. Hasil pemeriksaan tidak disimpan di riwayat; login untuk menyimpan hasil koreksi ke riwayat.
+                    </p>
                 </form>
 
                 {% with messages = get_flashed_messages() %}
@@ -34,9 +42,25 @@
             <div class="preview-card">
                 <div class="preview-header">Pratinjau Dokumen</div>
                 {% if preview_url %}
-                    <div class="preview-placeholder">
-                        Dokumen DOCX siap diproses{% if filename %}: {{ filename }}{% endif %}.
-                        Pratinjau tidak tersedia untuk DOCX.
+                    <div class="preview-document" aria-label="Pratinjau isi dokumen">
+                        <div class="preview-document-meta">
+                            <strong>{{ display_filename or filename }}</strong>
+                            <a href="{{ preview_url }}" target="_blank" rel="noopener">Buka file asli</a>
+                        </div>
+                        {% if document_preview and document_preview.error %}
+                            <div class="preview-empty">{{ document_preview.error }}</div>
+                        {% elif document_preview and document_preview.paragraphs %}
+                            <div class="preview-pages">
+                                {% for paragraph in document_preview.paragraphs %}
+                                    <p>{{ paragraph }}</p>
+                                {% endfor %}
+                                {% if document_preview.is_truncated %}
+                                    <p class="preview-truncated">Pratinjau dipotong. File lengkap tetap akan diproses.</p>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="preview-empty">Tidak ada teks yang bisa ditampilkan dari dokumen ini.</div>
+                        {% endif %}
                     </div>
                 {% else %}
                     <div class="preview-placeholder">
@@ -49,9 +73,17 @@
                 Dokumen anda berukuran besar, mohon tunggu sebentar.
             </div>
 
-            <form class="check-form" method="POST" action="{{ url_for('main.hasil_koreksi') }}">
-                <button class="check-button" type="submit" {% if not preview_url %}disabled{% endif %}>Periksa Dokumen</button>
-            </form>
+            <div class="process-actions">
+                {% if has_process_jobs %}
+                    <a class="process-link" href="{{ url_for('main.job_status_page') }}">lihat progres dokumen</a>
+                {% else %}
+                    <span class="process-link is-disabled">lihat progres dokumen</span>
+                {% endif %}
+
+                <form class="check-form" method="POST" action="{{ url_for('main.hasil_koreksi') }}">
+                    <button class="check-button" type="submit" {% if not preview_url %}disabled{% endif %}>Periksa Dokumen</button>
+                </form>
+            </div>
         </div>
     </section>
 {% endblock %}

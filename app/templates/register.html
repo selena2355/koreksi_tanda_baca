@@ -20,18 +20,42 @@
         </div>
         {% endif %}
         {% endwith %}
-        <form class="auth-form" method="post" action="{{ url_for('auth.register_post') }}">
-            <label class="auth-field">
+        <form class="auth-form" method="post" action="{{ url_for('auth.register_post') }}" novalidate>
+            <label class="auth-field {% if errors.get('username') %}error{% endif %}">
                 <span>Username</span>
-                <input type="text" name="username" placeholder="Nama pengguna" required autocomplete="username">
+                <input type="text" 
+                       name="username" 
+                       placeholder="Contoh: john_doe123" 
+                       value="{{ form_data.get('username', '') }}"
+                       {% if errors.get('username') %}aria-invalid="true" aria-describedby="username-error"{% endif %}
+                       autocomplete="username">
+                {% if errors.get('username') %}
+                <span id="username-error" class="auth-error-message">{{ errors.get('username') }}</span>
+                {% endif %}
             </label>
-            <label class="auth-field">
+            <label class="auth-field {% if errors.get('email') %}error{% endif %}">
                 <span>Email</span>
-                <input type="email" name="email" placeholder="contoh@domain.com" required autocomplete="email">
+                <input type="text" 
+                       name="email" 
+                       placeholder="Contoh: nama@gmail.com" 
+                       value="{{ form_data.get('email', '') }}"
+                       inputmode="email"
+                       {% if errors.get('email') %}aria-invalid="true" aria-describedby="email-error"{% endif %}
+                       autocomplete="email">
+                {% if errors.get('email') %}
+                <span id="email-error" class="auth-error-message">{{ errors.get('email') }}</span>
+                {% endif %}
             </label>
-            <label class="auth-field">
+            <label class="auth-field {% if errors.get('password') %}error{% endif %}">
                 <span>Password</span>
-                <input type="password" name="password" placeholder="Buat password" required autocomplete="new-password">
+                <input type="password" 
+                       name="password" 
+                       placeholder="Minimal 8 karakter" 
+                       {% if errors.get('password') %}aria-invalid="true" aria-describedby="register-password-error"{% endif %}
+                       autocomplete="new-password">
+                {% if errors.get('password') %}
+                <span id="register-password-error" class="auth-error-message">{{ errors.get('password') }}</span>
+                {% endif %}
             </label>
             <button class="auth-submit" type="submit">Daftar</button>
         </form>

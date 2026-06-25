@@ -20,14 +20,29 @@
         </div>
         {% endif %}
         {% endwith %}
-        <form class="auth-form" method="post" action="{{ url_for('auth.login_post') }}">
-            <label class="auth-field">
+        <form class="auth-form" method="post" action="{{ url_for('auth.login_post') }}" novalidate>
+            <label class="auth-field {% if errors.get('identifier') %}error{% endif %}">
                 <span>Email atau Username</span>
-                <input type="text" name="identifier" placeholder="contoh@domain.com atau username" required autocomplete="username">
+                <input type="text" 
+                       name="identifier" 
+                       placeholder="Masukkan email atau username akun Anda" 
+                       value="{{ form_data.get('identifier', '') }}"
+                       {% if errors.get('identifier') %}aria-invalid="true" aria-describedby="identifier-error"{% endif %}
+                       autocomplete="username">
+                {% if errors.get('identifier') %}
+                <span id="identifier-error" class="auth-error-message">{{ errors.get('identifier') }}</span>
+                {% endif %}
             </label>
-            <label class="auth-field">
+            <label class="auth-field {% if errors.get('password') %}error{% endif %}">
                 <span>Password</span>
-                <input type="password" name="password" placeholder="Masukkan password" required autocomplete="current-password">
+                <input type="password" 
+                       name="password" 
+                       placeholder="Masukkan password akun Anda" 
+                       {% if errors.get('password') %}aria-invalid="true" aria-describedby="password-error"{% endif %}
+                       autocomplete="current-password">
+                {% if errors.get('password') %}
+                <span id="password-error" class="auth-error-message">{{ errors.get('password') }}</span>
+                {% endif %}
             </label>
             <button class="auth-submit" type="submit">Login</button>
         </form>

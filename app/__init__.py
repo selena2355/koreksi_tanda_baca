@@ -6,6 +6,7 @@ from .routes.main_routes import main_bp
 from .routes.auth_routes import auth_bp
 from .routes.riwayat_routes import riwayat_bp
 from .extensions import db, migrate
+from . import models  # noqa: F401
 
 
 # Fungsi untuk membuat dan mengkonfigurasi aplikasi Flask

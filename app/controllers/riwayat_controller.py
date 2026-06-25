@@ -40,6 +40,7 @@ class RiwayatController:
             correction_html=riwayat.hasil_koreksi_html,
             document_name=riwayat.nama_dokumen,
             auto_save_history=False,
+            result_url=url_for("riwayat.detail_riwayat_page", riwayat_id=riwayat.id),
             back_url=url_for("riwayat.riwayat_page"),
             back_label="Kembali ke Riwayat",
             download_url=url_for("riwayat.unduh_riwayat", riwayat_id=riwayat.id),

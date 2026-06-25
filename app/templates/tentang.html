@@ -5,11 +5,16 @@
 {% block nav_class %}single{% endblock %}
 
 {% block nav_items %}
+    {% if from_page == "hasil" %}
+    <a class="nav-item" href="{{ return_url | default(url_for('main.hasil_koreksi')) }}">Hasil Koreksi</a>
+    <a class="nav-item active" href="{{ url_for('main.tentang_page', from_page='hasil', return_url=(return_url | default(url_for('main.hasil_koreksi')))) }}">Tentang Aplikasi</a>
+    {% else %}
     <a class="nav-item" href="{{ url_for('main.upload_dokumen') }}">Unggah</a>
     {% if session.get("user_id") %}
     <a class="nav-item" href="{{ url_for('riwayat.riwayat_page') }}">Riwayat</a>
     {% endif %}
     <a class="nav-item active" href="{{ url_for('main.tentang_page') }}">Tentang Aplikasi</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -45,7 +50,7 @@
                 <h2>Batasan Sistem</h2>
                 <ol>
                     <li>Dokumen yang dianalisis adalah dokumen berbahasa Indonesia, terutama karya ilmiah seperti skripsi, makalah, atau artikel akademik.</li>
-                    <li>Dokumen yang dianalisis terbatas pada dokumen berformat PDF.</li>
+                    <li>Dokumen yang dianalisis terbatas pada dokumen berformat DOCX.</li>
                     <li>Sistem berfokus pada koreksi tanda baca sesuai aturan EYD V: titik, koma, titik dua, tanda hubung, tanda petik, tanda tanya, dan tanda seru.</li>
                     <li>Sistem tidak mencakup koreksi ejaan kata, struktur kalimat, atau konsistensi istilah.</li>
                     <li>Sistem menghasilkan 2 keluaran, yaitu: teks asli dengan sorotan (highlight) pada kesalahan, dan teks yang sudah diperbaiki sesuai aturan EYD V.</li>
@@ -75,7 +80,7 @@
                                 <th>Kode</th>
                                 <th>Kategori</th>
                                 <th>Tanda Baca</th>
-                                <th>Aturan EYD V (Deskripsi)</th>
+                                <th>Aturan EYD V</th>
                                 <th>Pengecualian</th>
                             </tr>
                         </thead>
@@ -89,7 +94,7 @@
                             </tr>
                             <tr>
                                 <td>BR2</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Titik, Koma, Titik Dua</td>
                                 <td>Tanda baca harus diikuti spasi</td>
                                 <td>Akhir paragraf, URL, skala, galar, bilangan, dan perbandingan</td>
@@ -97,14 +102,14 @@
                             <tr>
                                 <td>BR3</td>
                                 <td>Kesalahan</td>
-                                <td>Tanda seru dan Tanda Tanya</td>
+                                <td>Tanda Seru dan Tanda Tanya</td>
                                 <td>Tanda baca tidak digunakan berulang</td>
                                 <td>-</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <h3>Tabel 2: Dot Rule (Aturan Titik)</h3>
+                    <h3>Tabel 2: Dot Rule (Aturan Tanda Titik)</h3>
                     <table class="rule-table">
                         <thead>
                             <tr>
@@ -118,36 +123,36 @@
                         <tbody>
                             <tr>
                                 <td>DR1</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Titik</td>
                                 <td>Digunakan pada akhir kalimat pernyataan</td>
                                 <td>-</td>
                             </tr>
                             <tr>
                                 <td>DR2</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Titik</td>
                                 <td>Digunakan di belakang singkatan nama orang</td>
                                 <td>-</td>
                             </tr>
                             <tr>
                                 <td>DR3</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Titik</td>
-                                <td>Digunakan pada singkatan yang umum (dak., dlm., dsb.)</td>
+                                <td>Digunakan di belakang singkatan gelar, jabatan, dan pangkat</td>
                                 <td>-</td>
                             </tr>
                             <tr>
                                 <td>DR4</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Titik</td>
                                 <td>Digunakan di belakang singkatan umum (dok., dlm., dsb.)</td>
-                                <td>Singkatan yang tidak perlu penanda pita (PT, CV, SIM, dll.)</td>
+                                <td>Singkatan yang tidak perlu menggunakan titik (PT, CV, SIM, dll.)</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <h3>Tabel 3: Commas Rule (Aturan Koma)</h3>
+                    <h3>Tabel 3: Comma Rule (Aturan Tanda Koma)</h3>
                     <table class="rule-table">
                         <thead>
                             <tr>
@@ -158,31 +163,24 @@
                                 <th>Pengecualian</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody>                            
                             <tr>
                                 <td>CmR1</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Koma</td>
-                                <td>Digunakan diantara unsur-unsur dalam perincian (>3 unsur)</td>
+                                <td>Digunakan untuk memisahkan anak kalimat yang mendahului induk kalimat</td>
                                 <td>-</td>
                             </tr>
                             <tr>
                                 <td>CmR2</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Koma</td>
-                                <td>Digunakan untuk memisahkan anak kalimat yang mendahului anak kalimat</td>
+                                <td>Digunakan sebelum kata penghubung di tengah kalimat</td>
                                 <td>-</td>
                             </tr>
                             <tr>
                                 <td>CmR3</td>
-                                <td>Pengecualian</td>
-                                <td>Koma</td>
-                                <td>Digunakan sebelum kata penghubung antarkalimat</td>
-                                <td>-</td>
-                            </tr>
-                            <tr>
-                                <td>CmR4</td>
-                                <td>Pengecualian</td>
+                                <td>Penggunaan</td>
                                 <td>Koma</td>
                                 <td>Digunakan di belakang kata penghubung antarkalimat</td>
                                 <td>-</td>
@@ -190,7 +188,7 @@
                         </tbody>
                     </table>
 
-                    <h3>Tabel 4: Question Rule (Aturan Tanda Tanya)</h3>
+                    <h3>Tabel 4: Quotation Rule (Aturan Tanda Petik)</h3>
                     <table class="rule-table">
                         <thead>
                             <tr>
@@ -203,72 +201,14 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>QsR1</td>
-                                <td>Pengecualian</td>
-                                <td>Tanda Tanya</td>
-                                <td>Digunakan pada akhir kalimat tanya</td>
-                                <td>-</td>
-                            </tr>
-                            <tr>
-                                <td>QsR2</td>
-                                <td>Kesalahan</td>
-                                <td>Tanda Tanya</td>
-                                <td>Tidak digunakan pada kalimat tanya tak langsung</td>
-                                <td>-</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <h3>Tabel 5: Exclamation Rule (Aturan Tanda Seru)</h3>
-                    <table class="rule-table">
-                        <thead>
-                            <tr>
-                                <th>Kode</th>
-                                <th>Kategori</th>
-                                <th>Tanda Baca</th>
-                                <th>Aturan EYD V</th>
-                                <th>Pengecualian</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>ExR1</td>
-                                <td>Pengecualian</td>
-                                <td>Tanda Seru</td>
-                                <td>Digunakan sesudah ungkapan seruan atau perintah</td>
-                                <td>-</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <h3>Tabel 6: Quotation Rule (Aturan Tanda Petik)</h3>
-                    <table class="rule-table">
-                        <thead>
-                            <tr>
-                                <th>Kode</th>
-                                <th>Kategori</th>
-                                <th>Tanda Baca</th>
-                                <th>Aturan EYD V</th>
-                                <th>Pengecualian</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>QrR1</td>
-                                <td>Pengecualian</td>
+                                <td>QtR1</td>
+                                <td>Penggunaan</td>
                                 <td>Tanda Petik</td>
-                                <td>Digunakan untuk mengapit seutas langsung</td>
+                                <td>Digunakan untuk mengapit petikan langsung</td>
                                 <td>-</td>
                             </tr>
                             <tr>
-                                <td>QrR2</td>
-                                <td>Pengecualian</td>
-                                <td>Tanda Petik</td>
-                                <td>Harus berpasangan (lambang dan penutup)</td>
-                                <td>-</td>
-                            </tr>
-                            <tr>
-                                <td>QrR3</td>
+                                <td>QtR2</td>
                                 <td>Kesalahan</td>
                                 <td>Tanda Petik</td>
                                 <td>Tidak memiliki spasi setelah pembuka atau sebelum penutup</td>
@@ -277,7 +217,7 @@
                         </tbody>
                     </table>
 
-                    <h3>Tabel 7: Colon Rule (Aturan Titik Dua)</h3>
+                    <h3>Tabel 5: Colon Rule (Aturan Titik Dua)</h3>
                     <table class="rule-table">
                         <thead>
                             <tr>
@@ -291,29 +231,15 @@
                         <tbody>
                             <tr>
                                 <td>CnR1</td>
-                                <td>Pengecualian</td>
-                                <td>Titik Dua</td>
-                                <td>Digunakan di akhir pernyataan lengkap yang diikuti perincian</td>
-                                <td>-</td>
-                            </tr>
-                            <tr>
-                                <td>CnR2</td>
-                                <td>Pengecualian</td>
-                                <td>Titik Dua</td>
-                                <td>Digunakan untuk memisahkan jilid dari nomor halaman</td>
-                                <td>-</td>
-                            </tr>
-                            <tr>
-                                <td>CnR3</td>
                                 <td>Kesalahan</td>
-                                <td>Titik Dua</td>
-                                <td>Tidak digunakan setelah kata yang dikuti daftar berjenjang</td>
+                                <td>Tanda Titik Dua</td>
+                                <td>Tidak digunakan setelah kata kerja atau predikat langsung sebelum objek</td>
                                 <td>-</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <h3>Tabel 8: Hyphen Rule (Aturan Tanda Hubung)</h3>
+                    <h3>Tabel 6: Hyphen Rule (Aturan Tanda Hubung)</h3>
                     <table class="rule-table">
                         <thead>
                             <tr>
@@ -326,28 +252,28 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>H-R1</td>
-                                <td>Pengecualian</td>
+                                <td>HR1</td>
+                                <td>Penggunaan</td>
                                 <td>Tanda Hubung</td>
                                 <td>Digunakan untuk menyambung unsur kata ulang</td>
                                 <td>-</td>
                             </tr>
                             <tr>
-                                <td>H-R2</td>
-                                <td>Pengecualian</td>
+                                <td>HR2</td>
+                                <td>Penggunaan</td>
                                 <td>Tanda Hubung</td>
-                                <td>Digunakan untuk merangkai tanggal dengan pernyataan dengan tanda yang dinyatakan dengan angka</td>
+                                <td>Digunakan untuk menyambung tanggal-bulan-tahun yang dinyatakan dengan angka</td>
                                 <td>-</td>
                             </tr>
                             <tr>
-                                <td>H-R3</td>
-                                <td>Pengecualian</td>
+                                <td>HR3</td>
+                                <td>Penggunaan</td>
                                 <td>Tanda Hubung</td>
-                                <td>Tidak digunakan setelah kata kerja atau proposisi langsung sebelum objek</td>
+                                <td>Digunakan untuk merangkai unsur berbeda, yaitu antara huruf nonkapital dan kapital serta antara huruf dan angka</td>
                                 <td>-</td>
                             </tr>
                             <tr>
-                                <td>H-R4</td>
+                                <td>HR4</td>
                                 <td>Kesalahan</td>
                                 <td>Tanda Hubung</td>
                                 <td>Tidak didahului atau diikuti dengan spasi</td>
@@ -359,13 +285,274 @@
 
                 <!-- Aturan Deteksi -->
                 <div id="aturan-deteksi" class="about-sub-tab-content">
-                    <p style="text-align: center; color: rgba(6, 35, 61, 0.6); padding: 40px 20px;">Bagian ini akan segera ditambahkan.</p>
+                    <h3>Tabel 1: Base Detection (Deteksi Dasar)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>BD1</td>
+                                <td>BR1</td>
+                                <td>Spasi sebelum tanda baca</td>
+                                <td>\s+([.,:?])</td>
+                                <td>Terdapat spasi sebelum tanda baca</td>
+                                <td>Hapus spasi sebelum tanda baca</td>
+                                <td>HIGH</td>
+                            </tr>
+                            <tr>
+                                <td>BD2</td>
+                                <td>BR2</td>
+                                <td>Spasi setelah tanda baca</td>
+                                <td>([.,:])(?=[A-Za-z0-9])</td>
+                                <td>Tidak ada spasi setelah tanda baca</td>
+                                <td>Tambah spasi setelah tanda baca</td>
+                                <td>HIGH</td>
+                            </tr>
+                            <tr>
+                                <td>BD3</td>
+                                <td>BR3</td>
+                                <td>Tanda baca digunakan berulang</td>
+                                <td>([.,?])\1+</td>
+                                <td>Tanda baca ganda/berlebihan terdeteksi</td>
+                                <td>Ganti dengan tanda baca tunggal</td>
+                                <td>HIGH</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h3>Tabel 2: Dot Detection (Deteksi Tanda Titik)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>DD1</td>
+                                <td>DR1</td>
+                                <td>Titik di akhir kalimat pernyataan</td>
+                                <td>(?m)^[^\n]+$ + filter kalimat pernyataan</td>
+                                <td>Kalimat pernyataan tidak diakhiri dengan titik</td>
+                                <td>Tambah "." di akhir kalimat</td>
+                                <td>HIGH</td>
+                            </tr>
+                            <tr>
+                                <td>DD2</td>
+                                <td>DR2</td>
+                                <td>Titik singkatan nama (1 huruf)</td>
+                                <td>POS: token 1 huruf kapital + token berikutnya xpos F--/X--; fallback: (?&lt;![A-Za-z])([A-Z])(?!\.)(?=\s+[A-Z][a-z])</td>
+                                <td>Singkatan nama orang tidak diikuti</td>
+                                <td>Tambah "." setelah 1 huruf inisial</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>DD3</td>
+                                <td>DR3</td>
+                                <td>Titik singkatan gelar/jabatan</td>
+                                <td>_GELAR_SET tanpa titik; fallback: \b(Dr|Prof|Ir|Drs|Dra|Hj|S\.?\s?Kom|M\.?\s?T|Ph\.?\s?D)(?!\.)\b</td>
+                                <td>Singkatan gelar/jabatan tidak diakhiri titik</td>
+                                <td>Tambah "." setelah gelar/jabatan</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>DD4</td>
+                                <td>DR4</td>
+                                <td>Titik singkatan umum</td>
+                                <td>\b(dll|dsb|dst|hlm|yth|dkk|sbb|tsb|tgl|ttd)(?!\.)</td>
+                                <td>Singkatan umum tidak diakhiri titik</td>
+                                <td>Tambah "." setelah singkatan umum</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h3>Tabel 3: Comma Detection (Deteksi Tanda Koma)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>                            
+                            <tr>
+                                <td>CmD1</td>
+                                <td>CmR1</td>
+                                <td>Koma setelah anak kalimat</td>
+                                <td>Awal kalimat: Ketika|Jika|Karena|Meskipun|Setelah|Sebelum|Apabila|Walaupun|Selama|Sejak|Sementara|Andai|Kendati|Bilamana|Manakala|Seandainya|Asal|Asalkan + batas anak kalimat tervalidasi</td>
+                                <td>Koma hilang setelah anak kalimat di awal</td>
+                                <td>Tambah "," setelah anak kalimat</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>CmD2</td>
+                                <td>CmR2</td>
+                                <td>Koma sebelum kata hubung di tengah kalimat</td>
+                                <td>\b(tetapi|melainkan|sedangkan|namun|padahal)\b|akan tetapi; lewati awal kalimat, koma/titik dua yang sudah ada, dan pasangan korelatif</td>
+                                <td>Koma hilang sebelum kata hubung pertentangan</td>
+                                <td>Tambah "," sebelum konjungsi</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>CmD3</td>
+                                <td>CmR3</td>
+                                <td>Koma setelah kata hubung antarkalimat</td>
+                                <td>Awal kalimat: Oleh karena itu|Oleh sebab itu|Dengan demikian|Dengan kata lain|Meskipun demikian|Namun|Jadi|Selain itu|Sebaliknya|Akan tetapi|Di samping itu|Adapun|Lebih lanjut|Sehubungan dengan itu|Karena itu|Karena ini (tanpa koma)</td>
+                                <td>Koma hilang setelah kata penghubung antarkalimat</td>
+                                <td>Tambah "," setelah kata hubung antarkalimat</td>
+                                <td>HIGH</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Tabel 5: Quotation Detection (Deteksi Tanda Petik)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>QtD1</td>
+                                <td>QtR1</td>
+                                <td>Tanda petik untuk kutipan langsung</td>
+                                <td>\b(berkata|mengatakan |bertanya|menyatakan |menjelaskan|mengu ngkapkan |menegaskan  |menuturkan| |memaparkan|mengutarakan |menyampaikan|menanggapi |menjawab|membenarkan)\b + petikan langsung diawali huruf kapital</td>
+                                <td>Petikan langsung tidak diapit tanda petik</td>
+                                <td>Membungkus kutipan langsung dengan tanda petik</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>QtD2</td>
+                                <td>QtR2</td>
+                                <td>Spasi setelah pembukan atau penutup</td>
+                                <td>&amp;quot;([^&amp;quot;\n]*)&amp;quot; + isi petikan berbeda dari isi.strip()</td>
+                                <td>Terdapat spasi di dalam tanda petik</td>
+                                <td>Hapus spasi di dalam tanda petik</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h3>Tabel 5: Colon Detection (Deteksi Tanda Titik Dua)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CnD1</td>
+                                <td>CnR1</td>
+                                <td>Titik dua salah setelah predikat</td>
+                                <td>\b(adalah|merupakan|ialah|meliputi|yaitu|yakni|mencakup|mengandung|terdiri\s+(?:dari|atas)|antara\s+lain|di\s+antaranya)\b(\s*):(\s*)</td>
+                                <td>Titik dua tidak digunakan setelah kata kerja/predikat langsung</td>
+                                <td>Hapus ":"</td>
+                                <td>LOW</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h3>Tabel 6: Hyphen Detection (Deteksi Tanda Hubung)</h3>
+                    <table class="rule-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Deteksi</th>
+                                <th>Aturan EYD V</th>
+                                <th>Nama Deteksi</th>
+                                <th>Pola Deteksi</th>
+                                <th>Pesan Eror</th>
+                                <th>Pola Koreksi</th>
+                                <th>Prioritas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>HD1</td>
+                                <td>HR1</td>
+                                <td>Tanda hubung kata ulang</td>
+                                <td>\b([A-Za-z]+)\s+([A-Za-z]+)\b + kata sama atau whitelist kata ulang berubah bunyi</td>
+                                <td>Kata ulang tidak menggunakan tanda hubung</td>
+                                <td>Tambah "-" di antara kata ulang</td>
+                                <td>HIGH</td>
+                            </tr>
+                            <tr>
+                                <td>HD2</td>
+                                <td>HR2</td>
+                                <td>Tanda hubung tanggal</td>
+                                <td>\b(\d{1,2})\s+(\d{1,2})\s+(\d{4})\b</td>
+                                <td>Tanggal tidak menggunakan tanda hubung</td>
+                                <td>Tambah "-" di antara komponen tanggal</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>HD3</td>
+                                <td>HR3</td>
+                                <td>Tanda hubung unsur berbeda</td>
+                                <td>\b(\d{4})\s+(an)\b|\b(Re)\s+(\d+)\b|\b(ke)\s+(\d+)\b|\b(non|anti|pro|pra|pasca|antar|multi|sub|e|a)\s+([A-Za-z][a-z]+)\b</td>
+                                <td>Unsur berbeda tidak dihubungkan</td>
+                                <td>Tambah "-"</td>
+                                <td>MEDIUM</td>
+                            </tr>
+                            <tr>
+                                <td>HD4</td>
+                                <td>HR4</td>
+                                <td>Spasi di sekitar tanda hubung</td>
+                                <td>(\b\S+)\s+-\s+(\S+\b)|(\b\S+)\s+-(\S+\b)|(\b\S+)-\s+(\S+\b)</td>
+                                <td>Terdapat spasi di sekitar tanda hubung</td>
+                                <td>Hapus spasi di sekitar tanda hubung</td>
+                                <td>HIGH</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </section>
 
     <script>
+        document.querySelectorAll('.rule-table').forEach(table => {
+            if (table.parentElement.classList.contains('rule-table-wrap')) {
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'rule-table-wrap';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        });
+
         // Tab navigation functionality
         document.querySelectorAll('.about-tab-button').forEach(button => {
             button.addEventListener('click', () => {

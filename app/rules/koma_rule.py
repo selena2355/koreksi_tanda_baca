@@ -7,12 +7,21 @@ class KomaRule(BaseRule):
     id = "koma"
 
     _RE_PERINCIAN = re.compile(r"\b(dan|atau)\b")
-    _RE_KONJUNGSI_TENGAH = re.compile(r"\b(tetapi|melainkan|sedangkan)\b")
+    _RE_KONJUNGSI_TENGAH = re.compile(
+        r"\b(tetapi|melainkan|sedangkan|namun|padahal)\b|akan tetapi"
+    )
     _RE_PENGHUBUNG_ANTARKALIMAT = re.compile(
-        r"\b(Oleh karena itu|Dengan demikian|Namun|Jadi)\b"
+        r"\b("
+        r"Oleh karena itu|Oleh sebab itu|Dengan demikian|Dengan kata lain|"
+        r"Meskipun demikian|Namun|Jadi|Selain itu|Sebaliknya|Akan tetapi|"
+        r"Di samping itu|Adapun|Lebih lanjut|Sehubungan dengan itu|"
+        r"Karena itu|Karena ini"
+        r")\b"
     )
     _RE_PEMBUKA_ANAK_KALIMAT = re.compile(
-        r"\b(Ketika|Jika|Karena|Meskipun|Setelah|Sebelum)\b"
+        r"\b(Ketika|Jika|Karena|Meskipun|Setelah|Sebelum|"
+        r"Apabila|Walaupun|Selama|Sejak|Sementara|Andai|Kendati|"
+        r"Bilamana|Manakala|Seandainya|Asal|Asalkan)\b"
     )
     _RE_CALON_INDUK_KALIMAT = re.compile(
         r"\b("
@@ -26,7 +35,17 @@ class KomaRule(BaseRule):
     _ITEM_UPOS = {"NOUN", "PROPN", "ADJ", "NUM", "PRON", "VERB"}
     _SUBJECT_UPOS = {"PRON", "PROPN", "NOUN"}
     _PREDICATE_UPOS = {"VERB", "ADJ", "AUX"}
-    _CLAUSE_UPOS = {"PRON", "PROPN", "NOUN", "VERB", "ADJ", "ADV", "NUM"}
+    _CLAUSE_UPOS = {"PRON", "PROPN", "NOUN", "VERB", "ADJ", "ADV", "NUM", "PART", "AUX"}
+    _PREDICATE_WORDS = {
+        "ada", "hadir", "hilang", "lanjut", "muncul", "tersedia", "terbatas",
+        "terjadi", "turun", "berlangsung", "selesai", "cukup", "penting",
+        "perlu", "dapat", "bisa", "mampu",
+    }
+    _PREDICATE_AUX_WORDS = {
+        "tidak", "belum", "sudah", "telah", "sedang", "akan", "dapat",
+        "bisa", "harus", "perlu",
+    }
+
 
     def cek(self, teks, konteks=None):
         if not teks:
@@ -34,51 +53,21 @@ class KomaRule(BaseRule):
 
         tokens = self._get_tokens(konteks)
         hasil = []
-        hasil.extend(self._cek_koma_dalam_perincian(teks, tokens))
         hasil.extend(self._cek_koma_setelah_anak_kalimat(teks, tokens))
         hasil.extend(self._cek_koma_sebelum_kata_penghubung(teks, tokens))
         hasil.extend(self._cek_koma_setelah_kata_penghubung_antarkalimat(teks, tokens))
         return hasil
-
-    def _cek_koma_dalam_perincian(self, teks, tokens):
-        hasil = []
-        for match in self._RE_PERINCIAN.finditer(teks):
-            start, end = match.span(1)
-            if not self._has_following_word(teks, end):
-                continue
-            if self._is_already_prefixed_by_comma(teks, start):
-                continue
-            if tokens and not self._is_valid_perincian_context(tokens, start, match.group(1)):
-                continue
-
-            sentence_start = self._find_sentence_start(teks, start)
-            left_segment = teks[sentence_start:start]
-            if "," not in left_segment:
-                continue
-
-            replacement_start = self._find_leading_space_start(teks, start)
-            hasil.append(
-                self._buat_kesalahan(
-                    kode="CmD1",
-                    jenis="koma_dalam_perincian",
-                    deskripsi="Koma hilang sebelum kata hubung dalam perincian.",
-                    perbaikan='Tambah "," sebelum "dan/atau" dalam perincian.',
-                    pengganti=f", {match.group(1)}",
-                    start=replacement_start,
-                    end=end,
-                    rule="CmR1",
-                    prioritas="HIGH",
-                    display_start=start,
-                    display_end=end,
-                )
-            )
-        return hasil
-
+    
     def _cek_koma_setelah_anak_kalimat(self, teks, tokens):
         hasil = []
         for match in self._RE_PEMBUKA_ANAK_KALIMAT.finditer(teks):
             start, end = match.span(1)
             if not self._is_sentence_or_line_start(teks, start):
+                continue
+
+            trigger = match.group(1).lower()
+            pos_after = teks[end:end + 6].strip().lower()
+            if trigger == "karena" and pos_after.startswith(("itu", "ini")):
                 continue
 
             sentence_end = self._find_sentence_end(teks, end)
@@ -108,7 +97,7 @@ class KomaRule(BaseRule):
                     pengganti=", ",
                     start=replacement_start,
                     end=boundary_start,
-                    rule="CmR2",
+                    rule="CmR1",
                     prioritas="MEDIUM",
                     display_start=start,
                     display_end=replacement_start,
@@ -116,17 +105,30 @@ class KomaRule(BaseRule):
             )
         return hasil
 
+    _RE_KORELATIF = re.compile(
+        r"\b(tidak hanya|bukan hanya|bukan saja|tak hanya|tidak saja)\b"
+    )
+
     def _cek_koma_sebelum_kata_penghubung(self, teks, tokens):
         hasil = []
         for match in self._RE_KONJUNGSI_TENGAH.finditer(teks):
-            start, end = match.span(1)
+            konjungsi = match.group(1) if match.group(1) else match.group(0)
+            start = match.start(1) if match.group(1) else match.start(0)
+            end = match.end(1) if match.group(1) else match.end(0)
+
             if not self._has_following_word(teks, end):
                 continue
             if self._is_sentence_or_line_start(teks, start):
                 continue
             if self._is_already_prefixed_by_comma(teks, start):
                 continue
-            if tokens and not self._is_valid_konjungsi_context(tokens, start, match.group(1)):
+            if self._is_already_prefixed_by_colon(teks, start):
+                continue
+            sentence_start_pos = self._find_sentence_start(teks, start)
+            left_segment = teks[sentence_start_pos:start]
+            if self._RE_KORELATIF.search(left_segment):
+                continue
+            if tokens and not self._is_valid_konjungsi_context(tokens, start, konjungsi):
                 continue
 
             replacement_start = self._find_leading_space_start(teks, start)
@@ -136,10 +138,10 @@ class KomaRule(BaseRule):
                     jenis="koma_sebelum_konjungsi",
                     deskripsi="Koma hilang sebelum kata hubung pertentangan.",
                     perbaikan='Tambah "," sebelum kata penghubung.',
-                    pengganti=f", {match.group(1)}",
+                    pengganti=f", {konjungsi}",
                     start=replacement_start,
                     end=end,
-                    rule="CmR3",
+                    rule="CmR2",
                     prioritas="MEDIUM",
                     display_start=start,
                     display_end=end,
@@ -167,39 +169,32 @@ class KomaRule(BaseRule):
                     pengganti=f"{match.group(1)},",
                     start=start,
                     end=end,
-                    rule="CmR4",
+                    rule="CmR3",
                     prioritas="HIGH",
                 )
             )
         return hasil
 
-    def _is_valid_perincian_context(self, tokens, start_char, conjunction_text):
-        idx = self._find_token_index(tokens, start_char, conjunction_text)
-        if idx is None:
-            return False
-
-        sentence_start, sentence_end = self._find_sentence_bounds(tokens, idx)
-        if not any(self._token_text(tokens[i]) == "," for i in range(sentence_start, idx)):
-            return False
-
-        prev_content = self._find_prev_content_token(tokens, idx, sentence_start)
-        next_content = self._find_next_content_token(tokens, idx, sentence_end)
-        if not prev_content or not next_content:
-            return False
-
-        return (
-            self._token_upos(prev_content) in self._ITEM_UPOS
-            and self._token_upos(next_content) in self._ITEM_UPOS
-        )
+    @staticmethod
+    def _normalized_item(text):
+        # Bersihkan konten kurung sebelum ekstraksi kata
+        text = re.sub(r"\([^)]*\)", "", text)
+        words = re.findall(r"\b[\w-]+\b", text)
+        if not words:
+            return ""
+        return " ".join(words)
 
     def _is_valid_konjungsi_context(self, tokens, start_char, conjunction_text):
-        idx = self._find_token_index(tokens, start_char, conjunction_text)
+        phrase_parts = conjunction_text.lower().split()
+        idx = self._find_token_index(tokens, start_char, phrase_parts[0])
         if idx is None:
             return False
 
+        end_idx = idx + len(phrase_parts)
+
         sentence_start, sentence_end = self._find_sentence_bounds(tokens, idx)
         prev_content = self._find_prev_content_token(tokens, idx, sentence_start)
-        next_content = self._find_next_content_token(tokens, idx, sentence_end)
+        next_content = self._find_next_content_token(tokens, end_idx - 1, sentence_end)
         if not prev_content or not next_content:
             return False
 
@@ -215,7 +210,7 @@ class KomaRule(BaseRule):
             return False
 
         sentence_start, sentence_end = self._find_sentence_bounds(tokens, idx)
-        if idx != sentence_start:
+        if not self._is_effective_sentence_start(tokens, idx, sentence_start):
             return False
 
         for offset, expected in enumerate(phrase_tokens):
@@ -236,7 +231,7 @@ class KomaRule(BaseRule):
             return None
 
         sentence_start, sentence_end = self._find_sentence_bounds(tokens, idx)
-        if idx != sentence_start:
+        if not self._is_effective_sentence_start(tokens, idx, sentence_start):
             return None
 
         seen_predicate = False
@@ -254,17 +249,39 @@ class KomaRule(BaseRule):
             if upos in self._CLAUSE_UPOS:
                 content_count += 1
 
-            prev_content = self._find_prev_content_token(tokens, cursor, idx)
             if (
                 seen_predicate
-                and content_count >= 3
+                and content_count >= 2
                 and upos in self._SUBJECT_UPOS
-                and prev_content
-                and self._token_upos(prev_content) in self._PREDICATE_UPOS
+                and self._has_predicate_nearby(tokens, cursor, idx)
                 and token.get("start_char", -1) >= 0
             ):
                 return token["start_char"]
         return None
+
+    def _has_predicate_nearby(self, tokens, subj_idx, lower_bound, window=3):
+        for cursor in range(subj_idx - 1, max(lower_bound, subj_idx - window) - 1, -1):
+            token = tokens[cursor]
+            upos = self._token_upos(token)
+            if upos == "PUNCT":
+                continue
+            if upos in self._PREDICATE_UPOS:
+                return True
+            if upos in self._CLAUSE_UPOS:
+                return False
+        return False
+
+    def _is_effective_sentence_start(self, tokens, idx, sentence_start):
+        for cursor in range(sentence_start, idx):
+            token = tokens[cursor]
+            upos = self._token_upos(token)
+            text = self._token_text(token)
+            if upos in {"PUNCT", "NUM", "SYM"}:
+                continue
+            if len(text) <= 2:
+                continue
+            return False
+        return True
 
     @staticmethod
     def _find_sentence_start(teks, idx):
@@ -304,7 +321,7 @@ class KomaRule(BaseRule):
             if teks[cursor] == "\n":
                 return True
             if not teks[cursor].isspace():
-                return teks[cursor] in ".!?"
+                return teks[cursor] in ".!?|"
             cursor -= 1
         return True
 
@@ -313,6 +330,12 @@ class KomaRule(BaseRule):
         if prev_idx < 0:
             return False
         return teks[prev_idx] == ","
+
+    def _is_already_prefixed_by_colon(self, teks, start):
+        prev_idx = self._find_prev_non_space(teks, start - 1)
+        if prev_idx < 0:
+            return False
+        return teks[prev_idx] == ":"
 
     @staticmethod
     def _has_following_word(teks, end):
@@ -324,6 +347,12 @@ class KomaRule(BaseRule):
         return cursor < len(teks) and teks[cursor].isalnum()
 
     def _find_anak_kalimat_boundary_regex(self, teks, clause_start, sentence_end):
+        predicate_boundary = self._find_boundary_after_subordinate_predicate(
+            teks, clause_start, sentence_end
+        )
+        if predicate_boundary is not None:
+            return predicate_boundary
+
         local_segment = teks[clause_start:sentence_end]
         candidates = []
         for candidate in self._RE_CALON_INDUK_KALIMAT.finditer(local_segment):
@@ -334,6 +363,30 @@ class KomaRule(BaseRule):
             candidates.append(absolute_start)
 
         return candidates[-1] if candidates else None
+
+    def _find_boundary_after_subordinate_predicate(self, teks, clause_start, sentence_end):
+        local_segment = teks[clause_start:sentence_end]
+        words = list(re.finditer(r"\b[\w-]+\b", local_segment))
+        if len(words) < 3:
+            return None
+
+        for idx, word_match in enumerate(words[:-1]):
+            word = word_match.group(0).lower()
+            prev_word = words[idx - 1].group(0).lower() if idx > 0 else ""
+            if idx < 1:
+                continue
+            if not self._looks_like_clause_predicate(word, prev_word):
+                continue
+
+            return clause_start + words[idx + 1].start()
+        return None
+
+    def _looks_like_clause_predicate(self, word, prev_word):
+        if word in self._PREDICATE_WORDS:
+            return True
+        if prev_word in self._PREDICATE_AUX_WORDS and len(word) > 3:
+            return True
+        return word.startswith(("ber", "me", "mem", "men", "meng", "meny", "di", "ter"))
 
     @staticmethod
     def _token_text(token):
@@ -347,7 +400,7 @@ class KomaRule(BaseRule):
         expected_text = expected_text.lower() if expected_text else None
         for idx, token in enumerate(tokens):
             token_start = token.get("start_char", -1)
-            if token_start != start_char:
+            if abs(token_start - start_char) > 2:
                 continue
             if expected_text and self._token_text(token).lower() != expected_text:
                 continue
@@ -367,7 +420,7 @@ class KomaRule(BaseRule):
     def _find_prev_content_token(self, tokens, idx, lower_bound):
         for cursor in range(idx - 1, lower_bound - 1, -1):
             token = tokens[cursor]
-            if self._token_upos(token) == "PUNCT":
+            if self._token_upos(token) in {"PUNCT", "PART"}:
                 continue
             if token.get("start_char", -1) < 0:
                 continue

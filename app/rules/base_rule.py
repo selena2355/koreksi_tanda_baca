@@ -10,9 +10,9 @@ class BaseRule:
 
     id = "base"
 
-    _RE_SPACE_BEFORE = re.compile(r"\s+([.,:?!])")
+    _RE_SPACE_BEFORE = re.compile(r"\s+([.,:?])")
     _RE_MISSING_SPACE_AFTER = re.compile(r"([.,:])(?=[A-Za-z0-9])")
-    _RE_REPEATED_PUNCT = re.compile(r"([.!?])\1+")
+    _RE_REPEATED_PUNCT = re.compile(r"([.,:])\1+")
 
     def cek(self, teks, konteks=None):
         if not teks:
