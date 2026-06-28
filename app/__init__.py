@@ -1,4 +1,4 @@
-from flask import Flask, app
+from flask import Flask
 import os
 
 from .config import Config
