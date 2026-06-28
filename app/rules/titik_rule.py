@@ -85,7 +85,17 @@ class TitikRule(BaseRule):
             baris_strip = baris.strip()
             if not baris_strip:
                 continue
+            
             if not re.search(r"[A-Za-z]", baris_strip):
+                continue
+            
+            line_tokens = self._get_line_tokens(
+                match.start(),
+                match.end(),
+                tokens,
+            )
+            
+            if tokens and not self._looks_like_statement(line_tokens):
                 continue
             if self._is_non_kalimat_pernyataan(baris_strip):
                 continue
@@ -442,6 +452,20 @@ class TitikRule(BaseRule):
 
         # Hanya ada label + nomor tanpa konten lain — kemungkinan caption
         return found_num
+
+    def _get_line_tokens(self, start, end, tokens):
+        if not tokens:
+            return []
+
+        return [
+            token
+            for token in tokens
+            if token["start_char"] >= start
+            and token["end_char"] <= end
+        ]
+        
+    def _looks_like_statement(self, line_tokens):
+        return any(token["upos"] == "VERB" for token in line_tokens)
 
     def _ends_with_special_abbreviation(self, text):
         # Sinkron dengan _RE_SINGKATAN_UMUM (termasuk tambahan sbb, tsb, tgl, ttd)

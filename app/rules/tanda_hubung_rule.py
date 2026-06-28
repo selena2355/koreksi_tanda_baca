@@ -45,6 +45,9 @@ class TandaHubungRule(BaseRule):
     def _cek_tanda_hubung_kata_ulang(self, teks):
         hasil = []
         for match in self._RE_KATA_ULANG.finditer(teks):
+            if "\n" in match.group(0) or "\r" in match.group(0):
+                continue
+            
             first = match.group(1)
             second = match.group(2)
             if first.lower() != second.lower():
@@ -217,6 +220,8 @@ class TandaHubungRule(BaseRule):
     def _cek_spasi_di_sekitar_tanda_hubung(self, teks):
         hasil = []
         for match in self._RE_SPASI_TANDA_HUBUNG.finditer(teks):
+            if "\n" in match.group(0) or "\r" in match.group(0):
+                continue
             # Ekstrak sisi kiri dan kanan dari grup yang aktif
             if match.group(1) and match.group(2):
                 left, right = match.group(1), match.group(2)   # spasi di kedua sisi

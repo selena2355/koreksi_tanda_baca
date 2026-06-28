@@ -24,7 +24,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(ROOT_DIR, "uploads")
 
     # Debug artifacts (derived files)
-    DEBUG_SAVE = True  # Set to True untuk menyimpan file debug
+    DEBUG_SAVE = os.getenv("DEBUG_SAVE", "True") == "True"
     DEBUG_FOLDER = os.path.join(ROOT_DIR, "debug")
 
     # Result folders

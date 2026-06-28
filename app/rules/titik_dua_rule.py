@@ -24,6 +24,15 @@ class TitikDuaRule(BaseRule):
     def _cek_titik_dua_salah_setelah_predikat(self, teks):
         hasil = []
         for match in self._RE_TITIK_DUA_SETELAH_PREDIKAT.finditer(teks):
+            after = teks[match.end():]
+            # Titik dua diperbolehkan jika diikuti baris baru (awal daftar/perincian)
+            if re.match(
+                r"\s*(?:\r?\n\s*)?(?:\d+\.|[A-Za-z]\.|[IVXLCDM]+\.|[-•])",
+                after,
+                re.IGNORECASE,
+            ):
+                continue
+
             colon_pos = teks.find(":", match.start(), match.end())
             hasil.append(
                 self._buat_kesalahan(

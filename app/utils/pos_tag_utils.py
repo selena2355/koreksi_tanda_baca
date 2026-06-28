@@ -58,8 +58,12 @@ class POSTagger:
             return self._pipeline
 
         resources_path = os.path.join(self.model_dir, "resources.json")
-        if self.auto_download:
-            stanza.download(self.lang, model_dir=self.model_dir, processors="tokenize,pos")
+        if self.auto_download and not os.path.exists(resources_path):
+            stanza.download(
+                self.lang,
+                model_dir=self.model_dir,
+                processors="tokenize,pos",
+            )
         elif not os.path.exists(resources_path):
             raise RuntimeError(
                 "Model Stanza tidak ditemukan. Jalankan: "

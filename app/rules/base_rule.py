@@ -29,6 +29,10 @@ class BaseRule:
         for match in self._RE_SPACE_BEFORE.finditer(teks):
             punct = match.group(1)
             start, end = match.span()
+            segment = match.group(0)
+
+            if "\n" in segment or "\r" in segment:
+                continue
             hasil.append(
                 self._buat_kesalahan(
                     kode="BD1",
@@ -148,6 +152,7 @@ class BaseRule:
 
     @staticmethod
     def _looks_like_gelar_token(token):
+        token = token.strip("\"'“”‘’()[]{}")
         if not token or not re.search(r"[A-Za-z]", token):
             return False
         if not re.fullmatch(r"[A-Za-z.,]+", token):

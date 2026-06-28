@@ -83,9 +83,12 @@ class SentenceBoundaryDetector:
         if stanza is None:
             raise RuntimeError("Stanza belum terpasang. Tambahkan ke requirements dan install.")
 
-        if self._auto_download:
-            stanza.download(self._stanza_lang, model_dir=self._stanza_dir, processors="tokenize")
-
+        if self.auto_download and not os.path.exists(resources_path):
+            stanza.download(
+                self.lang,
+                model_dir=self._stanza_dir,
+                processors="tokenize",
+            )
         self._pipeline = stanza.Pipeline(
             lang=self._stanza_lang,
             processors="tokenize",
