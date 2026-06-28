@@ -8,8 +8,8 @@
     session,
     make_response,
     jsonify,
-) 
-import os 
+)
+import os
 import secrets
 from io import BytesIO
 from docx import Document
@@ -17,15 +17,12 @@ from datetime import datetime, timedelta
 
 from ..config import Config
 from ..models import PemeriksaanJob
-from ..services.ekstraksi_teks_service import TextExtractor
-from ..services.preprocessing_service import PreprocessingService
-from ..services.pemeriksaan_dokumen_service import PemeriksaanDokumenService
 from ..services.pemeriksaan_job_service import PemeriksaanJobService
 from ..services.riwayat_service import RiwayatService
 from ..services.auth_service import AuthService
 from ..utils.file_utils import FileUtils
-from ..utils.text_utils import TextNormalizer
 from ..utils.docx_utils import DocxUtils
+from ..services.ekstraksi_teks_service import TextExtractor
 
 
 class SistemWeb:
@@ -39,38 +36,24 @@ class SistemWeb:
         "CnD": "Titik Dua",
     }
 
-    # Fungsi untuk menginisialisasi layanan pemeriksaan dokumen dengan opsi untuk menyuntikkan layanan preprocessing,
-    # koreksi, dan aturan deteksi yang dapat disesuaikan, atau menggunakan default jika tidak diberikan.
     def __init__(
         self,
         pemeriksaan_service=None,
         auth_service=None,
         riwayat_service=None,
-        preprocessing_service=None,
         docx_extractor=None,
         file_utils=None,
         docx_utils=None,
-        text_normalizer=None,
         job_service=None,
     ):
-        self.text_normalizer = text_normalizer or TextNormalizer()
-        self.preprocessing_service = preprocessing_service or PreprocessingService(
-            text_normalizer=self.text_normalizer
-        )
         self.docx_extractor = docx_extractor or TextExtractor()
         self.file_utils = file_utils or FileUtils()
         self.docx_utils = docx_utils or DocxUtils()
-        self.pemeriksaan_service = pemeriksaan_service or PemeriksaanDokumenService(
-            preprocessing_service=self.preprocessing_service
-        )
         self.auth_service = auth_service or AuthService()
         self.riwayat_service = riwayat_service or RiwayatService()
         self.job_service = job_service or PemeriksaanJobService(
             docx_extractor=self.docx_extractor,
-            preprocessing_service=self.preprocessing_service,
-            pemeriksaan_service=self.pemeriksaan_service,
             file_utils=self.file_utils,
-            text_normalizer=self.text_normalizer,
         )
 
     # Fungsi untuk membersihkan file hasil pemeriksaan sebelumnya agar tidak menumpuk di server
@@ -342,42 +325,6 @@ class SistemWeb:
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
         return response
-    
-    # Fungsi tambahan untuk mengubah output POS tag dari Stanza menjadi format yang lebih sederhana untuk digunakan dalam pemeriksaan aturan
-    def _flatten_pos_tags(self, pos_tags, normalized_text):
-        """
-        Konversi output POSTagger (list of list of dict) ke format flat
-        yang dibutuhkan TitikRule: list of dict dengan key text, upos,
-        start_char, end_char.
-        """
-        flat = []
-        search_start = 0
-        for sent in pos_tags:
-            for tag in sent:
-                word = tag["token"]
-                # Cari posisi token di teks asli mulai dari search_start
-                idx = normalized_text.find(word, search_start)
-                if idx == -1:
-                    # Kalau tidak ketemu, skip tapi jangan geser search_start
-                    flat.append({
-                        "text": word,
-                        "upos": tag["upos"],
-                        "xpos": tag["xpos"],
-                        "lemma": tag.get("lemma", ""),
-                        "start_char": -1,
-                        "end_char": -1,
-                    })
-                    continue
-                flat.append({
-                    "text": word,
-                    "upos": tag["upos"],
-                    "xpos": tag["xpos"],
-                    "lemma": tag.get("lemma", ""),
-                    "start_char": idx,
-                    "end_char": idx + len(word),
-                })
-                search_start = idx + len(word)
-        return flat
 
     # Endpoint untuk menampilkan hasil deteksi dan koreksi
     def tampilkan_hasil(self):
@@ -446,7 +393,7 @@ class SistemWeb:
             flash("File hasil koreksi sudah tidak tersedia. Silakan proses dokumen ulang.")
             self._clear_current_result_session()
             return redirect(url_for("main.upload_dokumen"))
-        
+
         # Baca error summary
         error_summary = {}
         current_file = session.get("current_file")
@@ -458,7 +405,7 @@ class SistemWeb:
             )
             if summary_data:
                 error_summary = self._normalize_error_summary(summary_data)
-        
+
         response = make_response(
             render_template(
                 "hasil.html",
@@ -801,20 +748,20 @@ def unduh_hasil_koreksi():
 
     # Generate DOCX in memory
     doc = Document()
-    
+
     # Split text by lines and add to document
     lines = koreksi_text.split('\n')
     for line in lines:
-        if line.strip():  # Only add non-empty lines
+        if line.strip():
             doc.add_paragraph(line)
         else:
-            doc.add_paragraph()  # Add empty paragraph to preserve spacing
-    
+            doc.add_paragraph()
+
     # Save to BytesIO buffer
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-    
+
     # Create response with DOCX file
     response = make_response(buffer.getvalue())
     response.headers["Content-Disposition"] = "attachment; filename=hasil_koreksi.docx"
@@ -825,7 +772,6 @@ def unduh_hasil_koreksi():
     return response
 
 
-# Endpoint untuk membersihkan preview dan hasil terkait (opsional, bisa dipanggil via AJAX)
 def clear_preview():
     _sistem_web._clear_preview_and_results()
     return {"status": "ok"}
