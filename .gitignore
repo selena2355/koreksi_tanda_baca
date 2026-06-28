@@ -30,6 +30,7 @@ correction_result/
 logs/
 models/stanza/
 instance/
+tests/
 
 # Database
 *.sqlite
