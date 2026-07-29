@@ -1,7 +1,7 @@
 # Indonesian Scientific Punctuation Checker
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
-![Flask](https://img.shields.io/badge/Flask-3.x-black)
+![Flask](https://img.shields.io/badge/Flask-3.1.3-black)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 🚀 Key Features
@@ -11,7 +11,7 @@
 - Automatic correction for DOCX scientific documents
 - Background worker for asynchronous document processing
 
-A web-based application for detecting and correcting Indonesian punctuation errors in scientific documents based on **EYD V (Ejaan Bahasa Indonesia Edisi Kelima)**. The system applies a rule-based approach using **Regular Expressions** and **Part-of-Speech (POS) Tagging** to identify punctuation errors and provide correction suggestions.
+A web-based application for detecting and correcting Indonesian punctuation errors in scientific documents based on **EYD V (Ejaan Bahasa Indonesia Edisi Kelima)**. The system applies a rule-based approach using **Regular Expressions** and **Part-of-Speech (POS) Tagging** to identify punctuation errors and correct it automatically.
 
 > This project was developed as the final project for the Diploma III Information Technology Program.
 
@@ -20,7 +20,7 @@ A web-based application for detecting and correcting Indonesian punctuation erro
 ## 📄 Table of Contents
 
 - Overview
-- Features
+- User Features
 - Screenshots
 - Tech Stack
 - System Architecture
