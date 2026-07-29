@@ -1,14 +1,39 @@
 # Indonesian Scientific Punctuation Checker
 
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Flask](https://img.shields.io/badge/Flask-3.x-black)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## 🚀 Key Features
+
+- Rule-based punctuation detection based on EYD V
+- Regular Expression and POS Tagging (Stanza)
+- Automatic correction for DOCX scientific documents
+- Background worker for asynchronous document processing
+
 A web-based application for detecting and correcting Indonesian punctuation errors in scientific documents based on **EYD V (Ejaan Bahasa Indonesia Edisi Kelima)**. The system applies a rule-based approach using **Regular Expressions** and **Part-of-Speech (POS) Tagging** to identify punctuation errors and provide correction suggestions.
 
 > This project was developed as the final project for the Diploma III Information Technology Program.
 
 ---
 
+## 📄 Table of Contents
+
+- Overview
+- Features
+- Screenshots
+- Tech Stack
+- System Architecture
+- Installation
+- Project Structure
+- Future Improvements
+- License
+
+---
+
 ## 📖 Overview
 
-Writing scientific papers requires consistent punctuation according to the Indonesian spelling guidelines (EYD V). However, punctuation errors are still common, especially in the use of:
+Scientific writing requires proper punctuation according to the Indonesian Spelling Guidelines (EYD V). However, punctuation errors remain common in academic documents and often require manual proofreading, especially in the use of:
 
 - Period (.)
 - Comma (,)
@@ -16,57 +41,44 @@ Writing scientific papers requires consistent punctuation according to the Indon
 - Quotation Marks (" ")
 - Hyphen (-)
 
-This application helps users automatically detect and correct those punctuation errors in DOCX documents.
-
----
-
-## ✨ Features
-
-- Upload scientific documents (.docx)
-- Automatic document preprocessing
-- Sentence segmentation
-- Tokenization and POS Tagging using Stanza
-- Rule-based punctuation error detection
-- Error explanation for each detected issue
-- Automatic punctuation correction
-- Download corrected document
-- Processing status using background worker
+This application helps users automatically detect and correct punctuation errors in DOCX scientific documents using a rule-based approach combined with Regular Expressions and POS Tagging.
 
 ---
 
 ## 🖼 Screenshots
 
-### Home Page
+### Upload Page
 
-*(Insert screenshot here)*
+<img src="screenshots/upload.png" width="700">
+
+### Document Processing Status
+
+<img src="screenshots/document_processing.png" width="700">
+
+### Detection & Correction Result
+
+<img src="screenshots/detection_correction_result.png" width="700">
+
+### Correction History (Authenticated Users)
+
+<img src="screenshots/correction_history.png" width="700">
+
+### About Application Page
+
+<img src="screenshots/about_application.png" width="700">
 
 ---
 
-### Detection Result
+## ✨ User Features
 
-*(Insert screenshot here)*
-
----
-
-### Correction Result
-
-*(Insert screenshot here)*
-
----
-
-## 🏗 System Architecture
-
-The application consists of several processing stages:
-
-1. Upload document
-2. Text extraction
-3. Text normalization
-4. Sentence segmentation
-5. Tokenization
-6. POS Tagging (Stanza)
-7. Rule-based punctuation detection
-8. Automatic correction
-9. Result generation
+- Upload DOCX scientific documents
+- Preview uploaded documents
+- Track processing status
+- Detect punctuation errors automatically
+- View explanations for each detected error
+- Correct punctuation errors automatically
+- Download corrected documents
+- View correction history (authenticated users)
 
 ---
 
@@ -76,12 +88,13 @@ The application consists of several processing stages:
 
 - Python
 - Flask
-- SQLAlchemy
+- Flask-SQLAlchemy
 - Flask-Migrate
 
 ### Database
 
 - MySQL
+- PyMySQL
 
 ### NLP
 
@@ -100,31 +113,36 @@ The application consists of several processing stages:
 
 ---
 
-## 📂 Project Structure
+## 🏗 System Architecture
 
-```
-app/
-│
-├── controllers/
-├── models/
-├── routes/
-├── rules/
-├── services/
-├── static/
-├── templates/
-├── utils/
-├── __init__.py
-├── config.py
-├── extensions.py
-│
-migrations/
-.env.example
-.gitignore
-README.md
-app.py
-cleanup_jobs.py
-requirements.txt
-worker.py
+The application consists of several processing stages:
+
+```text
+DOCX Document
+        │
+        ▼
+Text Extraction
+        │
+        ▼
+Normalization
+        │
+        ▼
+Sentence Segmentation
+        │
+        ▼
+Tokenization
+        │
+        ▼
+POS Tagging (Stanza)
+        │
+        ▼
+Rule-Based Detection
+        │
+        ▼
+Automatic Correction
+        │
+        ▼
+Corrected Document
 ```
 
 ---
@@ -134,8 +152,8 @@ worker.py
 ### 1. Clone repository
 
 ```bash
-git clone https://github.com/USERNAME/indonesian-punctuation-checker.git
-cd indonesian-punctuation-checker
+git clone https://github.com/selena2355/indonesian-punctuation-correction.git
+cd indonesian-punctuation-correction
 ```
 
 ### 2. Create virtual environment
@@ -164,36 +182,46 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 5. Download Stanza model
+### 5. Configure environment variables
 
-```python
-import stanza
-stanza.download("id")
+Copy the example configuration file.
+
+Windows
+
+```powershell
+copy .env.example .env
 ```
 
-or
+Linux / macOS
 
 ```bash
-python download_stanza.py
+cp .env.example .env
 ```
 
-*(Adjust according to your project.)*
+Then edit the `.env` file according to your local environment.
 
-### 6. Configure environment variables
-
-Create a `.env` file.
-
-Example:
+Example configuration:
 
 ```env
 SECRET_KEY=your-secret-key
-
 DATABASE_URL=mysql+pymysql://username:password@localhost/database_name
-
-STANZA_DIR=models/stanza
 ```
 
----
+### 6. Create Database
+
+Create an empty MySQL database before running the migration.
+
+For example:
+
+```sql
+CREATE DATABASE punctuation_checker;
+```
+
+Update the `DATABASE_URL` inside `.env`.
+
+```env
+DATABASE_URL=mysql+pymysql://username:password@localhost/punctuation_checker
+```
 
 ### 7. Upgrade database
 
@@ -201,37 +229,64 @@ STANZA_DIR=models/stanza
 flask db upgrade
 ```
 
----
+### 8. Start background worker
 
-### 8. Start worker
+Open a terminal and run:
 
 ```bash
 python worker.py
 ```
 
----
+### 9. Start the web application
 
-### 9. Run application
+Open another terminal and run:
 
 ```bash
-flask run
+python app.py
+```
+
+---
+
+## 📂 Project Structure
+
+```text
+.
+├── app/
+│   ├── controllers/     # Request handlers
+│   ├── models/          # Database models
+│   ├── routes/          # Application routes
+│   ├── rules/           # Punctuation detection rules
+│   ├── services/        # Core business logic
+│   ├── static/          # CSS, JavaScript, images
+│   ├── templates/       # Jinja2 templates
+│   ├── utils/           # Utility functions
+│   ├── config.py
+│   ├── extensions.py
+│   └── __init__.py
+│
+├── migrations/          # Flask-Migrate files
+├── app.py               # Web application entry point
+├── worker.py            # Background job worker
+├── cleanup_jobs.py      # Cleanup expired jobs
+├── requirements.txt
+└── .env.example
 ```
 
 ---
 
 ## 📌 Future Improvements
 
-- PDF document support
-- Faster processing for large documents
-- Additional punctuation rules
-- REST API
-- Batch document processing
+- Support additional document formats (PDF, TXT)
+- Improve detection accuracy by reducing false positives
+- Expand punctuation rules based on future EYD revisions
+- Optimize processing performance for large documents
+- Support batch document processing
 
 ---
 
 ## 👩‍💻 Author
 
-Selena
+Hanifah Alya
 
 Diploma III Information Technology
 
